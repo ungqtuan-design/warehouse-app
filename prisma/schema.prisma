@@ -1,0 +1,113 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum ProductStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum TransactionType {
+  MANUFACTURER_IN
+  TRANSFER
+  CUSTOMER_OUT
+  ADJUSTMENT
+}
+
+enum LocationCode {
+  KHO_TONG
+  KHO_LE
+}
+
+model User {
+  id                    String                 @id @default(cuid())
+  email                 String                 @unique
+  name                  String
+  role                  String                 @default("admin")
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
+  createdTransactions   InventoryTransaction[] @relation("TransactionCreatedBy")
+}
+
+model Supplier {
+  id          String    @id @default(cuid())
+  name        String
+  contactName String?
+  phone       String?
+  email       String?
+  address     String?
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  products    Product[]
+
+  @@index([name])
+}
+
+model Product {
+  id                    String                 @id @default(cuid())
+  sku                   String                 @unique
+  name                  String
+  imageUrl              String?
+  status                ProductStatus          @default(ACTIVE)
+  isObsolete            Boolean                @default(false)
+  obsoleteAt            DateTime?
+  supplierId            String
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
+  supplier              Supplier               @relation(fields: [supplierId], references: [id])
+  inventoryBalances     InventoryBalance[]
+  inventoryTransactions InventoryTransaction[]
+
+  @@index([name])
+  @@index([status, isObsolete])
+}
+
+model Location {
+  id                  String                 @id @default(cuid())
+  code                LocationCode           @unique
+  name                String
+  createdAt           DateTime               @default(now())
+  updatedAt           DateTime               @updatedAt
+  sourceTransactions  InventoryTransaction[] @relation("SourceLocation")
+  destinationTransactions InventoryTransaction[] @relation("DestinationLocation")
+  inventoryBalances   InventoryBalance[]
+}
+
+model InventoryTransaction {
+  id                    String          @id @default(cuid())
+  type                  TransactionType
+  productId             String
+  quantity              Int
+  referenceNo           String?
+  note                  String?
+  customerName          String?
+  sourceLocationId      String?
+  destinationLocationId String?
+  createdById           String?
+  createdAt             DateTime        @default(now())
+  product               Product         @relation(fields: [productId], references: [id])
+  sourceLocation        Location?       @relation("SourceLocation", fields: [sourceLocationId], references: [id])
+  destinationLocation   Location?       @relation("DestinationLocation", fields: [destinationLocationId], references: [id])
+  createdBy             User?           @relation("TransactionCreatedBy", fields: [createdById], references: [id])
+
+  @@index([productId, createdAt])
+  @@index([type, createdAt])
+}
+
+model InventoryBalance {
+  id         String   @id @default(cuid())
+  productId  String
+  locationId String
+  quantity   Int      @default(0)
+  updatedAt  DateTime @updatedAt
+  product    Product  @relation(fields: [productId], references: [id])
+  location   Location @relation(fields: [locationId], references: [id])
+
+  @@unique([productId, locationId])
+}
