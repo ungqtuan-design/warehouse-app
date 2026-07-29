@@ -7,9 +7,11 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "prisma:generate": "prisma generate",
-    "prisma:migrate": "prisma migrate dev",
-    "prisma:seed": "prisma db seed"
+    "prisma:validate": "dotenv -e .env.local -- prisma validate",
+    "prisma:generate": "dotenv -e .env.local -- prisma generate",
+    "prisma:migrate": "dotenv -e .env.local -- prisma migrate dev",
+    "prisma:seed": "dotenv -e .env.local -- prisma db seed",
+    "prisma:setup": "npm run prisma:generate && npm run prisma:migrate -- --name init && npm run prisma:seed"
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",
@@ -25,6 +27,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "autoprefixer": "^10.4.20",
+    "dotenv-cli": "^8.0.0",
     "eslint": "^9",
     "eslint-config-next": "^15.5.22",
     "json-stable-stringify-without-jsonify": "^1.0.1",
