@@ -1,17 +1,14 @@
-import { products } from "@/lib/mock-data";
+import { getProductRows } from "@/lib/warehouse-data";
 
-const rankedProducts = [...products].sort((left, right) => {
-  const leftTotal = left.khoTongQty + left.khoLeQty;
-  const rightTotal = right.khoTongQty + right.khoLeQty;
+export default async function InventoryPage() {
+  const rankedProducts = (await getProductRows()).sort((left, right) => {
+    if (left.totalQty === right.totalQty) {
+      return right.outbound30d - left.outbound30d;
+    }
 
-  if (leftTotal === rightTotal) {
-    return right.outbound30d - left.outbound30d;
-  }
+    return left.totalQty - right.totalQty;
+  });
 
-  return leftTotal - rightTotal;
-});
-
-export default function InventoryPage() {
   return (
     <div className="grid gap-6">
       <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -38,7 +35,13 @@ export default function InventoryPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 bg-white">
-              {rankedProducts.map((product) => (
+              {rankedProducts.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="px-4 py-10 text-center text-sm text-slate-500">
+                    No inventory rows in Neon yet.
+                  </td>
+                </tr>
+              ) : rankedProducts.map((product) => (
                 <tr key={product.id}>
                   <td className="px-4 py-3">
                     <div className="font-medium text-slate-900">{product.name}</div>
@@ -47,7 +50,7 @@ export default function InventoryPage() {
                   <td className="px-4 py-3 text-slate-600">{product.supplierName}</td>
                   <td className="px-4 py-3 text-slate-600">{product.khoTongQty}</td>
                   <td className="px-4 py-3 text-slate-600">{product.khoLeQty}</td>
-                  <td className="px-4 py-3 font-semibold text-slate-950">{product.khoTongQty + product.khoLeQty}</td>
+                  <td className="px-4 py-3 font-semibold text-slate-950">{product.totalQty}</td>
                   <td className="px-4 py-3">
                     <span className="rounded-full bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-700">
                       {product.outbound30d}

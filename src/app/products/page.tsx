@@ -1,6 +1,8 @@
-import { products, suppliers } from "@/lib/mock-data";
+import { getProductRows, getSuppliers } from "@/lib/warehouse-data";
 
-export default function ProductsPage() {
+export default async function ProductsPage() {
+  const [products, suppliers] = await Promise.all([getProductRows(), getSuppliers()]);
+
   return (
     <div className="grid gap-6">
       <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -42,8 +44,13 @@ export default function ProductsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 bg-white">
-              {products.map((product) => {
-                const total = product.khoTongQty + product.khoLeQty;
+              {products.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="px-4 py-10 text-center text-sm text-slate-500">
+                    No products in Neon yet.
+                  </td>
+                </tr>
+              ) : products.map((product) => {
                 return (
                   <tr key={product.id}>
                     <td className="px-4 py-3 font-medium text-slate-900">{product.sku}</td>
@@ -53,13 +60,13 @@ export default function ProductsPage() {
                     </td>
                     <td className="px-4 py-3 text-slate-600">{product.supplierName}</td>
                     <td className="px-4 py-3">
-                      <span className={`rounded-full px-3 py-1 text-xs font-semibold ${product.status === "Active" ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>
-                        {product.status}
+                      <span className={`rounded-full px-3 py-1 text-xs font-semibold ${product.status === "ACTIVE" ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>
+                        {product.status === "ACTIVE" ? "Active" : "Inactive"}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-slate-600">{product.khoTongQty}</td>
                     <td className="px-4 py-3 text-slate-600">{product.khoLeQty}</td>
-                    <td className="px-4 py-3 font-semibold text-slate-900">{total}</td>
+                    <td className="px-4 py-3 font-semibold text-slate-900">{product.totalQty}</td>
                     <td className="px-4 py-3">
                       <button type="button" className="rounded-lg border border-cyan-200 bg-cyan-50 px-3 py-2 text-xs font-semibold text-cyan-800 transition hover:bg-cyan-100">
                         Add to basket

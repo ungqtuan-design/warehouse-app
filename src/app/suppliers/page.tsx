@@ -1,6 +1,8 @@
-import { suppliers } from "@/lib/mock-data";
+import { getSuppliers } from "@/lib/warehouse-data";
 
-export default function SuppliersPage() {
+export default async function SuppliersPage() {
+  const suppliers = await getSuppliers();
+
   return (
     <div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
       <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -26,7 +28,13 @@ export default function SuppliersPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 bg-white">
-              {suppliers.map((supplier) => (
+              {suppliers.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="px-4 py-10 text-center text-sm text-slate-500">
+                    No suppliers in Neon yet.
+                  </td>
+                </tr>
+              ) : suppliers.map((supplier) => (
                 <tr key={supplier.id}>
                   <td className="px-4 py-3">
                     <div className="font-medium text-slate-900">{supplier.name}</div>

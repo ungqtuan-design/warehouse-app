@@ -1,6 +1,8 @@
-import { inboundDraftLines } from "@/lib/mock-data";
+import { getInboundRows } from "@/lib/warehouse-data";
 
-export default function InboundPage() {
+export default async function InboundPage() {
+  const inboundRows = await getInboundRows();
+
   return (
     <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
       <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -22,8 +24,14 @@ export default function InboundPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 bg-white">
-              {inboundDraftLines.map((line) => (
-                <tr key={`${line.product}-${line.note}`}>
+              {inboundRows.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="px-4 py-10 text-center text-sm text-slate-500">
+                    No manufacturer receipts in Neon yet.
+                  </td>
+                </tr>
+              ) : inboundRows.map((line) => (
+                <tr key={line.id}>
                   <td className="px-4 py-3 font-medium text-slate-900">{line.product}</td>
                   <td className="px-4 py-3 text-slate-600">{line.supplier}</td>
                   <td className="px-4 py-3 text-slate-600">{line.quantity}</td>
