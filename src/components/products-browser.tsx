@@ -1,10 +1,9 @@
 "use client";
 
 import { useActionState, useEffect, useMemo, useState } from "react";
-import { Pencil } from "lucide-react";
+import { Check, Pencil } from "lucide-react";
 
 import { updateProductInlineAction } from "@/app/actions/warehouse";
-import { primaryActionButtonClass } from "@/components/action-feedback";
 import { useBasket } from "@/components/basket-provider";
 
 type ProductRow = {
@@ -278,19 +277,38 @@ function ProductTableRows({
   onBasketAdd: () => void;
   onEditResult: (kind: "success" | "error", message: string) => void;
 }) {
+  const editFormId = `product-inline-edit-${product.id}`;
+  const [state, formAction, pending] = useActionState(updateProductInlineAction, {
+    status: "idle" as const,
+    message: "",
+  });
+
+  useEffect(() => {
+    if (state.status === "success") {
+      onEditResult("success", text.updateProductSuccess);
+    }
+
+    if (state.status === "error") {
+      const message = state.message === "Invalid image file." ? text.invalidImageMessage : text.updateProductError;
+      onEditResult("error", message);
+    }
+  }, [onEditResult, state.message, state.status, text.invalidImageMessage, text.updateProductError, text.updateProductSuccess]);
+
   return (
     <>
       <tr>
         <td className="px-4 py-3 font-medium text-slate-900">{product.sku}</td>
         <td className="px-4 py-3">
           <button
-            type="button"
-            onClick={onToggleEdit}
-            className="inline-flex rounded-lg border border-slate-300 p-2 text-slate-700 transition hover:bg-slate-50"
-            aria-label={text.edit}
-            title={text.edit}
+            type={isExpanded ? "submit" : "button"}
+            form={isExpanded ? editFormId : undefined}
+            onClick={isExpanded ? undefined : onToggleEdit}
+            disabled={pending}
+            className={`inline-flex rounded-lg border p-2 transition ${isExpanded ? "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100" : "border-slate-300 text-slate-700 hover:bg-slate-50"}`}
+            aria-label={isExpanded ? text.updateProduct : text.edit}
+            title={isExpanded ? text.updateProduct : text.edit}
           >
-            <Pencil className="h-4 w-4" />
+            {isExpanded ? <Check className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}
           </button>
         </td>
         <td className="px-4 py-3">
@@ -351,44 +369,29 @@ function ProductTableRows({
         </td>
       </tr>
       {isExpanded ? (
-        <ProductEditInlineRow product={product} suppliers={suppliers} text={text} basketWarehouse={basketWarehouse} onResult={onEditResult} />
+        <ProductEditInlineRow formId={editFormId} formAction={formAction} product={product} suppliers={suppliers} text={text} />
       ) : null}
     </>
   );
 }
 
 function ProductEditInlineRow({
+  formId,
+  formAction,
   product,
   suppliers,
   text,
-  onResult,
 }: {
+  formId: string;
+  formAction: (payload: FormData) => void;
   product: ProductRow;
   suppliers: SupplierOption[];
   text: ProductsBrowserText & { product: string; supplier: string; leadTimeDays: string; active: string };
-  basketWarehouse: "KHO_TONG" | "KHO_LE";
-  onResult: (kind: "success" | "error", message: string) => void;
 }) {
-  const [state, formAction, pending] = useActionState(updateProductInlineAction, {
-    status: "idle" as const,
-    message: "",
-  });
-
-  useEffect(() => {
-    if (state.status === "success") {
-      onResult("success", text.updateProductSuccess);
-    }
-
-    if (state.status === "error") {
-      const message = state.message === "Invalid image file." ? text.invalidImageMessage : text.updateProductError;
-      onResult("error", message);
-    }
-  }, [onResult, state.message, state.status, text.invalidImageMessage, text.updateProductError, text.updateProductSuccess]);
-
   return (
     <tr className="bg-slate-50">
       <td colSpan={12} className="px-4 py-4">
-        <form action={formAction} className="grid gap-4 lg:grid-cols-2">
+        <form id={formId} action={formAction} className="grid gap-4 lg:grid-cols-2">
           <input type="hidden" name="productId" value={product.id} />
           <label className="grid gap-2 text-sm font-medium text-slate-700">
             {text.product}
@@ -414,11 +417,6 @@ function ProductEditInlineRow({
             <input name="isActive" type="checkbox" className="h-4 w-4 rounded border-slate-300" defaultChecked={product.status === "ACTIVE"} />
             {text.active}
           </label>
-          <div className="lg:col-span-2">
-            <button type="submit" disabled={pending} className={primaryActionButtonClass}>
-              {text.updateProduct}
-            </button>
-          </div>
         </form>
       </td>
     </tr>
