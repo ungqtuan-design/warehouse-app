@@ -75,7 +75,7 @@ export default async function RootLayout({
                 >
                   <Icon className="h-4 w-4 text-cyan-300" />
                   <span>{label}</span>
-                  {href === "/inventory" ? <InventoryBasketCount /> : null}
+                  {href === "/basket" ? <InventoryBasketCount /> : null}
                 </Link>
               ))}
             </nav>
@@ -98,7 +98,7 @@ export default async function RootLayout({
                   <PreferenceToggles theme={theme} language={language} text={text} />
                   <div className="flex flex-col items-start gap-2 sm:items-end">
                     <p className="text-sm font-medium text-slate-600">
-                      {text.greeting} {user.name || user.username}
+                      {text.greeting} {user.username}
                     </p>
                     <form action={logoutAction}>
                       <button type="submit" className="signout-button inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white/80 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50">

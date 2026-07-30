@@ -34,7 +34,6 @@ model User {
   id                  String                 @id @default(cuid())
   username            String                 @unique
   passwordHash        String
-  name                String
   role                UserRole               @default(ADMIN)
   createdAt           DateTime               @default(now())
   updatedAt           DateTime               @updatedAt

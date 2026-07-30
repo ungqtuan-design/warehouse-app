@@ -46,6 +46,9 @@ END $$;
 ALTER TABLE "User"
   DROP COLUMN IF EXISTS "email";
 
+ALTER TABLE "User"
+  DROP COLUMN IF EXISTS "name";
+
 UPDATE "User"
 SET "passwordHash" = 'ccd7a3f6bb8068812a1ad7fcc9b1793d:19973d5ef1819df087106ae7ec66f67aacc5f2818877577c7a1603c542bad9c5c41234f5f543851d0fc7ce57065cf2613d34cc438c6017c8a2730b77ae4f2307'
 WHERE "passwordHash" IS NULL;
@@ -98,19 +101,17 @@ ALTER TABLE "InventoryTransaction"
   ADD COLUMN IF NOT EXISTS "destinationLocationId" TEXT,
   ADD COLUMN IF NOT EXISTS "createdById" TEXT;
 
-INSERT INTO "User" ("id", "username", "passwordHash", "name", "role", "createdAt", "updatedAt")
+INSERT INTO "User" ("id", "username", "passwordHash", "role", "createdAt", "updatedAt")
 VALUES (
   'admin_seed_user',
   'admin',
   'ccd7a3f6bb8068812a1ad7fcc9b1793d:19973d5ef1819df087106ae7ec66f67aacc5f2818877577c7a1603c542bad9c5c41234f5f543851d0fc7ce57065cf2613d34cc438c6017c8a2730b77ae4f2307',
-  'Administrator',
   'ADMIN',
   CURRENT_TIMESTAMP,
   CURRENT_TIMESTAMP
 )
 ON CONFLICT ("username") DO UPDATE
 SET "passwordHash" = EXCLUDED."passwordHash",
-    "name" = EXCLUDED."name",
     "role" = EXCLUDED."role",
     "updatedAt" = CURRENT_TIMESTAMP;
 

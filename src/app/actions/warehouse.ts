@@ -34,7 +34,6 @@ const updateProductSchema = productSchema.extend({
 const userSchema = z.object({
   username: z.string().trim().min(3),
   password: z.string().min(3),
-  name: z.string().trim().min(1),
   role: z.nativeEnum(UserRole),
 });
 
@@ -57,6 +56,29 @@ const inboundBatchSchema = z.object({
   referenceNo: z.string().trim().optional(),
   lines: z.array(inboundLineSchema).min(1),
 });
+
+const outboundLineSchema = z.object({
+  productId: z.string().trim().min(1),
+  quantity: z.coerce.number().int().min(1),
+  warehouse: z.enum([LocationCode.KHO_TONG, LocationCode.KHO_LE]),
+});
+
+const outboundBatchSchema = z.object({
+  customerName: z.string().trim().min(1),
+  referenceNo: z.string().trim().optional(),
+  note: z.string().trim().optional(),
+  lines: z.array(outboundLineSchema).min(1),
+});
+
+type ProductUpdateInlineState = {
+  status: "idle" | "success" | "error";
+  message: string;
+};
+
+type BasketSubmitState = {
+  status: "idle" | "success" | "error";
+  message: string;
+};
 
 function toOptionalValue(value: string | undefined) {
   if (!value) {
@@ -141,7 +163,10 @@ export async function createProductAction(formData: FormData) {
   redirect("/products");
 }
 
-export async function updateProductAction(formData: FormData) {
+export async function updateProductInlineAction(
+  _previousState: ProductUpdateInlineState,
+  formData: FormData,
+): Promise<ProductUpdateInlineState> {
   await requireUser();
 
   const imageEntry = formData.get("imageFile");
@@ -149,35 +174,49 @@ export async function updateProductAction(formData: FormData) {
 
   if (imageEntry instanceof File && imageEntry.size > 0) {
     if (!imageEntry.type.startsWith("image/")) {
-      redirect("/products?error=invalid-image");
+      return {
+        status: "error" as const,
+        message: "Invalid image file.",
+      };
     }
 
     imageDataUrl = await resizeUploadedImage(imageEntry);
   }
 
-  const parsed = updateProductSchema.parse({
-    productId: String(formData.get("productId") ?? ""),
-    name: String(formData.get("name") ?? ""),
-    supplierId: String(formData.get("supplierId") ?? ""),
-    leadTimeDays: formData.get("leadTimeDays") ?? "0",
-    isActive: formData.get("isActive") === "on",
-  });
+  try {
+    const parsed = updateProductSchema.parse({
+      productId: String(formData.get("productId") ?? ""),
+      name: String(formData.get("name") ?? ""),
+      supplierId: String(formData.get("supplierId") ?? ""),
+      leadTimeDays: formData.get("leadTimeDays") ?? "0",
+      isActive: formData.get("isActive") === "on",
+    });
 
-  await prisma.product.update({
-    where: {
-      id: parsed.productId,
-    },
-    data: {
-      name: parsed.name,
-      supplierId: parsed.supplierId,
-      leadTimeDays: parsed.leadTimeDays,
-      status: parsed.isActive ? "ACTIVE" : "INACTIVE",
-      ...(imageDataUrl === undefined ? {} : { imageUrl: imageDataUrl }),
-    },
-  });
+    await prisma.product.update({
+      where: {
+        id: parsed.productId,
+      },
+      data: {
+        name: parsed.name,
+        supplierId: parsed.supplierId,
+        leadTimeDays: parsed.leadTimeDays,
+        status: parsed.isActive ? "ACTIVE" : "INACTIVE",
+        ...(imageDataUrl === undefined ? {} : { imageUrl: imageDataUrl }),
+      },
+    });
+  } catch {
+    return {
+      status: "error" as const,
+      message: "Unable to update product.",
+    };
+  }
 
   revalidatePath("/products");
-  redirect("/products");
+
+  return {
+    status: "success" as const,
+    message: "Product updated successfully.",
+  };
 }
 
 export async function createUserAction(formData: FormData) {
@@ -186,7 +225,6 @@ export async function createUserAction(formData: FormData) {
   const parsed = userSchema.parse({
     username: String(formData.get("username") ?? "").toLowerCase(),
     password: String(formData.get("password") ?? ""),
-    name: String(formData.get("name") ?? ""),
     role: formData.get("role") === UserRole.ADMIN ? UserRole.ADMIN : UserRole.OPERATION,
   });
 
@@ -208,7 +246,6 @@ export async function createUserAction(formData: FormData) {
       data: {
         username: parsed.username,
         passwordHash: hashPassword(parsed.password),
-        name: parsed.name,
         role: parsed.role,
       },
     });
@@ -326,6 +363,138 @@ export async function createInboundBatchAction(formData: FormData) {
   revalidatePath("/inventory");
   revalidatePath("/");
   redirect("/inbound");
+}
+
+export async function submitBasketAction(
+  _previousState: BasketSubmitState,
+  formData: FormData,
+): Promise<BasketSubmitState> {
+  const user = await requireUser();
+
+  let rawLines: unknown = [];
+
+  try {
+    rawLines = JSON.parse(String(formData.get("linesJson") ?? "[]"));
+  } catch {
+    return {
+      status: "error",
+      message: "Invalid basket payload.",
+    };
+  }
+
+  let parsed: z.infer<typeof outboundBatchSchema>;
+
+  try {
+    parsed = outboundBatchSchema.parse({
+      customerName: String(formData.get("customerName") ?? ""),
+      referenceNo: String(formData.get("referenceNo") ?? ""),
+      note: String(formData.get("note") ?? ""),
+      lines: rawLines,
+    });
+  } catch {
+    return {
+      status: "error",
+      message: "Please complete customer and basket information.",
+    };
+  }
+
+  const locations = await prisma.location.findMany({
+    where: {
+      code: {
+        in: [LocationCode.KHO_TONG, LocationCode.KHO_LE],
+      },
+    },
+    select: {
+      id: true,
+      code: true,
+    },
+  });
+
+  const locationMap = new Map(locations.map((location) => [location.code, location.id]));
+
+  if (!locationMap.has(LocationCode.KHO_TONG) || !locationMap.has(LocationCode.KHO_LE)) {
+    return {
+      status: "error",
+      message: "Warehouse locations are not initialized.",
+    };
+  }
+
+  try {
+    await prisma.$transaction(async (tx) => {
+      for (const line of parsed.lines) {
+        const locationId = locationMap.get(line.warehouse);
+
+        if (!locationId) {
+          throw new Error("missing-location");
+        }
+
+        const balance = await tx.inventoryBalance.findUnique({
+          where: {
+            productId_locationId: {
+              productId: line.productId,
+              locationId,
+            },
+          },
+          select: {
+            quantity: true,
+          },
+        });
+
+        if (!balance || balance.quantity < line.quantity) {
+          throw new Error("insufficient-stock");
+        }
+
+        await tx.inventoryBalance.update({
+          where: {
+            productId_locationId: {
+              productId: line.productId,
+              locationId,
+            },
+          },
+          data: {
+            quantity: {
+              decrement: line.quantity,
+            },
+          },
+        });
+
+        await tx.inventoryTransaction.create({
+          data: {
+            type: "CUSTOMER_OUT",
+            productId: line.productId,
+            quantity: line.quantity,
+            customerName: parsed.customerName,
+            referenceNo: toOptionalValue(parsed.referenceNo),
+            note: toOptionalValue(parsed.note),
+            sourceLocationId: locationId,
+            createdById: user.id,
+          },
+        });
+      }
+    });
+  } catch (error) {
+    if (error instanceof Error && error.message === "insufficient-stock") {
+      return {
+        status: "error",
+        message: "One or more basket items exceed available stock.",
+      };
+    }
+
+    return {
+      status: "error",
+      message: "Unable to submit basket.",
+    };
+  }
+
+  revalidatePath("/basket");
+  revalidatePath("/inventory");
+  revalidatePath("/products");
+  revalidatePath("/");
+
+  return {
+    status: "success",
+    message: "Basket submitted successfully.",
+  };
 }
 
 export async function resetUserPasswordAction(formData: FormData) {

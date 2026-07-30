@@ -32,7 +32,6 @@ export const getCurrentSession = cache(async () => {
         select: {
           id: true,
           username: true,
-          name: true,
           role: true,
         },
       },

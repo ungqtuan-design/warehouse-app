@@ -15,7 +15,6 @@ export default async function ManageUsersPage({
     select: {
       id: true,
       username: true,
-      name: true,
       role: true,
       createdAt: true,
     },
@@ -46,8 +45,7 @@ export default async function ManageUsersPage({
             <article key={user.id} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <h2 className="text-base font-semibold text-slate-950">{user.name}</h2>
-                  <p className="text-sm text-slate-500">@{user.username}</p>
+                  <h2 className="text-base font-semibold text-slate-950">{user.username}</h2>
                 </div>
                 <span className={`rounded-full px-3 py-1 text-xs font-semibold ${user.role === UserRole.ADMIN ? "bg-rose-50 text-rose-700" : "bg-emerald-50 text-emerald-700"}`}>
                   {user.role === UserRole.ADMIN ? text.admin : text.operation}
@@ -85,10 +83,6 @@ export default async function ManageUsersPage({
         <p className="text-sm font-medium text-slate-500">{text.createUser}</p>
         <h2 className="mt-1 text-xl font-semibold text-slate-950">{text.manageUsersTitle}</h2>
         <form action={createUserAction} className="mt-5 grid gap-4">
-          <label className="grid gap-2 text-sm font-medium text-slate-700">
-            {text.fullName}
-            <input name="name" className="rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-cyan-500" placeholder={text.userDisplayNamePlaceholder} required />
-          </label>
           <label className="grid gap-2 text-sm font-medium text-slate-700">
             {text.username}
             <input name="username" className="rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-cyan-500" placeholder={text.loginIdPlaceholder} required />
