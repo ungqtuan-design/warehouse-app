@@ -1,8 +1,7 @@
 import "server-only";
 
-import sharp from "sharp";
-
 export async function resizeUploadedImage(file: File) {
+  const { default: sharp } = await import("sharp");
   const buffer = Buffer.from(await file.arrayBuffer());
   const resized = await sharp(buffer)
     .rotate()

@@ -5,7 +5,7 @@ import { Boxes, ClipboardList, LayoutGrid, LogOut, Package, ShieldUser, Shopping
 
 import { logoutAction } from "@/app/actions/auth";
 import { BasketProvider } from "@/components/basket-provider";
-import { BasketSummaryCard } from "@/components/basket-summary-card";
+import { InventoryBasketCount } from "@/components/inventory-basket-count";
 import { PreferenceToggles } from "@/components/preference-toggles";
 import { RoutePrefetcher } from "@/components/route-prefetcher";
 import { getCurrentUser } from "@/lib/auth";
@@ -75,10 +75,10 @@ export default async function RootLayout({
                 >
                   <Icon className="h-4 w-4 text-cyan-300" />
                   <span>{label}</span>
+                  {href === "/inventory" ? <InventoryBasketCount /> : null}
                 </Link>
               ))}
             </nav>
-            <BasketSummaryCard text={text} />
           </aside>
           <div className="flex min-h-screen min-w-0 flex-col">
             <RoutePrefetcher routes={navigation.map((item) => item.href)} />
