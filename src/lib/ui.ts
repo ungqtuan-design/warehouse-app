@@ -5,7 +5,7 @@ import { legacyUiCookieNames, uiCookieNames, type UiLanguage, type UiTheme } fro
 
 const dictionaries = {
   en: {
-    appTitle: "Inventory management",
+    appTitle: "Warehouse App",
     appDescription: "MIMS stock flow for Kho Tổng and Kho Lẻ.",
     locationsLabel: "Locations",
     greeting: "Hi",
@@ -170,7 +170,7 @@ const dictionaries = {
     basketStockError: "One or more basket items exceed available stock.",
   },
   vi: {
-    appTitle: "Inventory management",
+    appTitle: "Warehouse App",
     appDescription: "MIMS quản lý luồng tồn kho cho Kho Tổng và Kho Lẻ.",
     locationsLabel: "Kho",
     greeting: "Chào",
