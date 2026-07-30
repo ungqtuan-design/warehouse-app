@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useMemo, useState } from "react";
+import { startTransition, useActionState, useEffect, useMemo, useRef, useState } from "react";
 import { Ban } from "lucide-react";
 import { useRouter } from "next/navigation";
 
@@ -53,6 +53,7 @@ export function BasketWorkspace({
   const { items, totalCount, removeItem, clearBasket } = useBasket();
   const [lineNotes, setLineNotes] = useState<Record<string, string>>({});
   const [notice, setNotice] = useState<ActionNotice>(null);
+  const handledStateRef = useRef<string>("idle:");
   const [state, formAction, pending] = useActionState(submitBasketAction, {
     status: "idle" as const,
     message: "",
@@ -66,11 +67,21 @@ export function BasketWorkspace({
   }))), [items, lineNotes]);
 
   useEffect(() => {
+    const currentStateKey = `${state.status}:${state.message}`;
+
+    if (handledStateRef.current === currentStateKey) {
+      return;
+    }
+
+    handledStateRef.current = currentStateKey;
+
     if (state.status === "success") {
       clearBasket();
       setLineNotes({});
-      router.refresh();
       setNotice({ kind: "success", message: text.basketSubmitSuccess });
+      startTransition(() => {
+        router.refresh();
+      });
       return;
     }
 
