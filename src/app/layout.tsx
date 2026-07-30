@@ -63,6 +63,7 @@ export default async function RootLayout({
           <div className="app-shell min-h-screen lg:grid lg:grid-cols-[18rem_1fr]">
           <aside className="border-b border-slate-200 bg-slate-950 text-slate-50 lg:min-h-screen lg:border-b-0 lg:border-r">
             <div className="border-b border-slate-800 px-4 py-5 sm:px-6 sm:py-6">
+              <p className="text-xs uppercase tracking-[0.3em] text-cyan-300">MIMS</p>
               <h1 className="mt-2 text-2xl font-semibold">{text.appTitle}</h1>
             </div>
             <nav className="flex gap-2 overflow-x-auto px-3 py-4 lg:grid lg:gap-1 lg:overflow-visible">
@@ -83,15 +84,12 @@ export default async function RootLayout({
           <div className="flex min-h-screen min-w-0 flex-col">
             <RoutePrefetcher routes={navigation.map((item) => item.href)} />
             <header className="app-header border-b border-slate-200 bg-white px-4 py-4 shadow-sm sm:px-6">
-              <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                <div className="flex flex-wrap items-center gap-3">
+              <div className="flex justify-end">
+                <div className="flex flex-wrap items-center justify-end gap-3">
+                  <PreferenceToggles theme={theme} language={language} text={text} />
                   <div className="rounded-full bg-cyan-50 px-4 py-2 text-sm font-medium text-cyan-900">
                     {user.role === "ADMIN" ? text.admin : text.operation}
                   </div>
-                  <div className="rounded-full bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-800">
-                    {text.locationsLabel}: {text.khoTong}, {text.khoLe}
-                  </div>
-                  <PreferenceToggles theme={theme} language={language} text={text} />
                   <div className="flex flex-col items-start gap-2 sm:items-end">
                     <p className="text-sm font-medium text-slate-600">
                       {text.greeting} {user.username}
