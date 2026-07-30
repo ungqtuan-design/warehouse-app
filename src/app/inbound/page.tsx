@@ -12,9 +12,6 @@ export default async function InboundPage() {
       <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <p className="text-sm font-medium text-slate-500">{text.inboundReceiving}</p>
         <h1 className="mt-1 text-2xl font-semibold text-slate-950">{text.receiveIntoKhoTong}</h1>
-        <p className="mt-2 max-w-2xl text-sm text-slate-600">
-          For MVP, manufacturer receipts can only increase stock in kho tong. Multiple lines can be submitted together.
-        </p>
 
         <div className="mt-5 overflow-x-auto rounded-2xl border border-slate-200">
           <table className="min-w-[720px] divide-y divide-slate-200 text-left text-sm lg:min-w-full">
@@ -22,16 +19,16 @@ export default async function InboundPage() {
               <tr>
                 <th className="px-4 py-3 font-medium">{text.product}</th>
                 <th className="px-4 py-3 font-medium">{text.supplier}</th>
-                <th className="px-4 py-3 font-medium">Qty</th>
-                <th className="px-4 py-3 font-medium">Destination</th>
-                <th className="px-4 py-3 font-medium">Note</th>
+                <th className="px-4 py-3 font-medium">{text.quantity}</th>
+                <th className="px-4 py-3 font-medium">{text.destination}</th>
+                <th className="px-4 py-3 font-medium">{text.note}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 bg-white">
               {inboundRows.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="px-4 py-10 text-center text-sm text-slate-500">
-                    No manufacturer receipts in Neon yet.
+                    {text.noInboundRows}
                   </td>
                 </tr>
               ) : inboundRows.map((line) => (
@@ -51,22 +48,19 @@ export default async function InboundPage() {
       </section>
 
       <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <p className="text-sm font-medium text-slate-500">Add inbound batch</p>
-        <h2 className="mt-1 text-xl font-semibold text-slate-950">Multi-line form</h2>
+        <p className="text-sm font-medium text-slate-500">{text.addInboundBatch}</p>
+        <h2 className="mt-1 text-xl font-semibold text-slate-950">{text.multiLineForm}</h2>
         <form className="mt-5 grid gap-4">
           <label className="grid gap-2 text-sm font-medium text-slate-700">
-            Reference number
-            <input className="rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-cyan-500" placeholder="Manufacturer shipment reference" />
+            {text.referenceNumber}
+            <input className="rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-cyan-500" placeholder={text.manufacturerShipmentReference} />
           </label>
           <label className="grid gap-2 text-sm font-medium text-slate-700">
-            Destination
-            <input className="rounded-xl border border-slate-300 bg-slate-100 px-4 py-3 text-slate-500" value="kho tong" readOnly />
+            {text.destination}
+            <input className="rounded-xl border border-slate-300 bg-slate-100 px-4 py-3 text-slate-500" value={text.khoTong} readOnly />
           </label>
-          <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-4 text-sm text-slate-600">
-            Each line will map to one MANUFACTURER_IN transaction. Inactive or obsolete products should be blocked by backend validation.
-          </div>
           <button type="button" className="rounded-xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800">
-            Submit inbound batch
+            {text.submitInboundBatch}
           </button>
         </form>
       </section>

@@ -34,7 +34,6 @@ model User {
   id                  String                 @id @default(cuid())
   username            String                 @unique
   passwordHash        String
-  email               String?                @unique
   name                String
   role                UserRole               @default(ADMIN)
   createdAt           DateTime               @default(now())
@@ -79,8 +78,6 @@ model Product {
   imageUrl              String?
   leadTimeDays          Int                    @default(0)
   status                ProductStatus          @default(ACTIVE)
-  isObsolete            Boolean                @default(false)
-  obsoleteAt            DateTime?
   supplierId            String
   createdAt             DateTime               @default(now())
   updatedAt             DateTime               @updatedAt
@@ -89,7 +86,7 @@ model Product {
   inventoryTransactions InventoryTransaction[]
 
   @@index([name])
-  @@index([status, isObsolete])
+  @@index([status])
 }
 
 model Location {

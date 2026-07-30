@@ -1,6 +1,6 @@
 import { ChevronsUpDown } from "lucide-react";
 
-import { createSupplierAction } from "@/app/actions/warehouse";
+import { createSupplierAction, updateSupplierAction } from "@/app/actions/warehouse";
 import { requireUser } from "@/lib/auth";
 import { getUiContext } from "@/lib/ui";
 import { getSuppliers } from "@/lib/warehouse-data";
@@ -28,32 +28,74 @@ export default async function SuppliersPage() {
             <thead className="bg-slate-50 text-slate-500">
               <tr>
                 <th className="px-4 py-3 font-medium">{text.supplier}</th>
-                <th className="px-4 py-3 font-medium">Contact</th>
+                <th className="px-4 py-3 font-medium">{text.contact}</th>
                 <th className="px-4 py-3 font-medium">{text.email}</th>
-                <th className="px-4 py-3 font-medium">Phone</th>
+                <th className="px-4 py-3 font-medium">{text.phone}</th>
                 <th className="px-4 py-3 font-medium">{text.status}</th>
+                <th className="px-4 py-3 font-medium">{text.actions}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 bg-white">
               {suppliers.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-4 py-10 text-center text-sm text-slate-500">
-                    No suppliers in Neon yet.
+                  <td colSpan={6} className="px-4 py-10 text-center text-sm text-slate-500">
+                    {text.noSuppliersRows}
                   </td>
                 </tr>
               ) : suppliers.map((supplier) => (
                 <tr key={supplier.id}>
-                  <td className="px-4 py-3">
-                    <div className="font-medium text-slate-900">{supplier.name}</div>
-                    <div className="text-xs text-slate-500">{supplier.address}</div>
-                  </td>
-                  <td className="px-4 py-3 text-slate-600">{supplier.contactName}</td>
-                  <td className="px-4 py-3 text-slate-600">{supplier.email}</td>
-                  <td className="px-4 py-3 text-slate-600">{supplier.phone}</td>
-                  <td className="px-4 py-3">
-                    <span className={`rounded-full px-3 py-1 text-xs font-semibold ${supplier.isActive ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-600"}`}>
-                      {supplier.isActive ? text.active : text.inactive}
-                    </span>
+                  <td colSpan={6} className="px-0 py-0">
+                    <details className="group">
+                      <summary className="grid cursor-pointer grid-cols-[1.5fr_1fr_1fr_1fr_1fr_auto] items-center gap-4 px-4 py-3">
+                        <div>
+                          <div className="font-medium text-slate-900">{supplier.name}</div>
+                          <div className="text-xs text-slate-500">{supplier.address}</div>
+                        </div>
+                        <div className="text-slate-600">{supplier.contactName}</div>
+                        <div className="text-slate-600">{supplier.email}</div>
+                        <div className="text-slate-600">{supplier.phone}</div>
+                        <div>
+                          <span className={`rounded-full px-3 py-1 text-xs font-semibold ${supplier.isActive ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-600"}`}>
+                            {supplier.isActive ? text.active : text.inactive}
+                          </span>
+                        </div>
+                        <span className="inline-flex rounded-full border border-slate-300 px-3 py-1 text-xs font-semibold text-slate-700 transition group-hover:bg-slate-50">
+                          {text.update}
+                        </span>
+                      </summary>
+                      <form action={updateSupplierAction} className="grid gap-4 border-t border-slate-200 bg-slate-50 px-4 py-4">
+                        <input type="hidden" name="supplierId" value={supplier.id} />
+                        <label className="grid gap-2 text-sm font-medium text-slate-700">
+                          {text.supplier}
+                          <input name="name" defaultValue={supplier.name} className="rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-cyan-500" required />
+                        </label>
+                        <label className="grid gap-2 text-sm font-medium text-slate-700">
+                          {text.contactPerson}
+                          <input name="contactName" defaultValue={supplier.contactName ?? ""} className="rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-cyan-500" />
+                        </label>
+                        <div className="grid gap-4 sm:grid-cols-2">
+                          <label className="grid gap-2 text-sm font-medium text-slate-700">
+                            {text.phone}
+                            <input name="phone" defaultValue={supplier.phone ?? ""} className="rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-cyan-500" />
+                          </label>
+                          <label className="grid gap-2 text-sm font-medium text-slate-700">
+                            {text.email}
+                            <input name="email" type="email" defaultValue={supplier.email ?? ""} className="rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-cyan-500" />
+                          </label>
+                        </div>
+                        <label className="grid gap-2 text-sm font-medium text-slate-700">
+                          {text.address}
+                          <textarea name="address" defaultValue={supplier.address ?? ""} className="min-h-28 rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-cyan-500" />
+                        </label>
+                        <label className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700">
+                          <input name="isActive" type="checkbox" className="h-4 w-4 rounded border-slate-300" defaultChecked={supplier.isActive} />
+                          {text.active}
+                        </label>
+                        <button type="submit" className="rounded-xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 sm:w-auto">
+                          {text.updateSupplier}
+                        </button>
+                      </form>
+                    </details>
                   </td>
                 </tr>
               ))}
@@ -75,25 +117,25 @@ export default async function SuppliersPage() {
         <form action={createSupplierAction} className="mt-5 grid gap-4">
           <label className="grid gap-2 text-sm font-medium text-slate-700">
             {text.supplier}
-            <input name="name" className="rounded-xl border border-slate-300 px-4 py-3 outline-none ring-0 transition focus:border-cyan-500" placeholder="Enter supplier name" required />
+            <input name="name" className="rounded-xl border border-slate-300 px-4 py-3 outline-none ring-0 transition focus:border-cyan-500" placeholder={text.enterSupplierName} required />
           </label>
           <label className="grid gap-2 text-sm font-medium text-slate-700">
-            Contact person
-            <input name="contactName" className="rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-cyan-500" placeholder="Contact person" />
+            {text.contactPerson}
+            <input name="contactName" className="rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-cyan-500" placeholder={text.contactPersonPlaceholder} />
           </label>
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="grid gap-2 text-sm font-medium text-slate-700">
-              Phone
-              <input name="phone" className="rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-cyan-500" placeholder="Phone number" />
+              {text.phone}
+              <input name="phone" className="rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-cyan-500" placeholder={text.phoneNumberPlaceholder} />
             </label>
             <label className="grid gap-2 text-sm font-medium text-slate-700">
               {text.email}
-              <input name="email" type="email" className="rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-cyan-500" placeholder="Email address" />
+              <input name="email" type="email" className="rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-cyan-500" placeholder={text.emailAddressPlaceholder} />
             </label>
           </div>
           <label className="grid gap-2 text-sm font-medium text-slate-700">
-            Address
-            <textarea name="address" className="min-h-28 rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-cyan-500" placeholder="Basic supplier address" />
+            {text.address}
+            <textarea name="address" className="min-h-28 rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-cyan-500" placeholder={text.basicSupplierAddressPlaceholder} />
           </label>
           <label className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-700">
             <input name="isActive" type="checkbox" className="h-4 w-4 rounded border-slate-300" defaultChecked />

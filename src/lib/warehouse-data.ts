@@ -76,7 +76,6 @@ export async function getProductRows() {
       supplierId: product.supplierId,
       supplierName: product.supplier.name,
       status: product.status,
-      isObsolete: product.isObsolete,
       khoTongQty,
       khoLeQty,
       totalQty: khoTongQty + khoLeQty,

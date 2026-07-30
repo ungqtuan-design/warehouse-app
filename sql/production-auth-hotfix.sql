@@ -17,14 +17,34 @@ ALTER TABLE "User"
   ADD COLUMN IF NOT EXISTS "passwordHash" TEXT,
   ADD COLUMN IF NOT EXISTS "role" "UserRole" NOT NULL DEFAULT 'ADMIN';
 
-UPDATE "User"
-SET "username" = LOWER(
-  COALESCE(
-    NULLIF(SPLIT_PART(COALESCE("email", ''), '@', 1), ''),
-    'user-' || SUBSTRING("id" FROM 1 FOR 8)
-  )
-)
-WHERE "username" IS NULL;
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = 'User'
+      AND column_name = 'email'
+  ) THEN
+    EXECUTE $sql$
+      UPDATE "User"
+      SET "username" = LOWER(
+        COALESCE(
+          NULLIF(SPLIT_PART(COALESCE("email", ''), '@', 1), ''),
+          'user-' || SUBSTRING("id" FROM 1 FOR 8)
+        )
+      )
+      WHERE "username" IS NULL
+    $sql$;
+  ELSE
+    UPDATE "User"
+    SET "username" = LOWER('user-' || SUBSTRING("id" FROM 1 FOR 8))
+    WHERE "username" IS NULL;
+  END IF;
+END $$;
+
+ALTER TABLE "User"
+  DROP COLUMN IF EXISTS "email";
 
 UPDATE "User"
 SET "passwordHash" = 'ccd7a3f6bb8068812a1ad7fcc9b1793d:19973d5ef1819df087106ae7ec66f67aacc5f2818877577c7a1603c542bad9c5c41234f5f543851d0fc7ce57065cf2613d34cc438c6017c8a2730b77ae4f2307'
@@ -35,7 +55,7 @@ ALTER TABLE "User"
   ALTER COLUMN "passwordHash" SET NOT NULL;
 
 CREATE UNIQUE INDEX IF NOT EXISTS "User_username_key" ON "User"("username");
-CREATE UNIQUE INDEX IF NOT EXISTS "User_email_key" ON "User"("email") WHERE "email" IS NOT NULL;
+DROP INDEX IF EXISTS "User_email_key";
 CREATE INDEX IF NOT EXISTS "User_username_idx" ON "User"("username");
 
 CREATE TABLE IF NOT EXISTS "UserSession" (
@@ -62,11 +82,13 @@ ALTER TABLE "Supplier"
 ALTER TABLE "Product"
   ADD COLUMN IF NOT EXISTS "imageUrl" TEXT,
   ADD COLUMN IF NOT EXISTS "leadTimeDays" INTEGER NOT NULL DEFAULT 0,
-  ADD COLUMN IF NOT EXISTS "status" "ProductStatus" NOT NULL DEFAULT 'ACTIVE',
-  ADD COLUMN IF NOT EXISTS "isObsolete" BOOLEAN NOT NULL DEFAULT FALSE,
-  ADD COLUMN IF NOT EXISTS "obsoleteAt" TIMESTAMP(3);
+  ADD COLUMN IF NOT EXISTS "status" "ProductStatus" NOT NULL DEFAULT 'ACTIVE';
 
-CREATE INDEX IF NOT EXISTS "Product_status_isObsolete_idx" ON "Product"("status", "isObsolete");
+ALTER TABLE "Product"
+  DROP COLUMN IF EXISTS "isObsolete",
+  DROP COLUMN IF EXISTS "obsoleteAt";
+
+CREATE INDEX IF NOT EXISTS "Product_status_idx" ON "Product"("status");
 
 ALTER TABLE "InventoryTransaction"
   ADD COLUMN IF NOT EXISTS "referenceNo" TEXT,
@@ -76,12 +98,11 @@ ALTER TABLE "InventoryTransaction"
   ADD COLUMN IF NOT EXISTS "destinationLocationId" TEXT,
   ADD COLUMN IF NOT EXISTS "createdById" TEXT;
 
-INSERT INTO "User" ("id", "username", "passwordHash", "email", "name", "role", "createdAt", "updatedAt")
+INSERT INTO "User" ("id", "username", "passwordHash", "name", "role", "createdAt", "updatedAt")
 VALUES (
   'admin_seed_user',
   'admin',
   'ccd7a3f6bb8068812a1ad7fcc9b1793d:19973d5ef1819df087106ae7ec66f67aacc5f2818877577c7a1603c542bad9c5c41234f5f543851d0fc7ce57065cf2613d34cc438c6017c8a2730b77ae4f2307',
-  'admin@wiings.local',
   'Administrator',
   'ADMIN',
   CURRENT_TIMESTAMP,
@@ -89,7 +110,6 @@ VALUES (
 )
 ON CONFLICT ("username") DO UPDATE
 SET "passwordHash" = EXCLUDED."passwordHash",
-    "email" = EXCLUDED."email",
     "name" = EXCLUDED."name",
     "role" = EXCLUDED."role",
     "updatedAt" = CURRENT_TIMESTAMP;

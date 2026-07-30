@@ -31,14 +31,12 @@ async function main() {
     update: {
       name: "Administrator",
       role: UserRole.ADMIN,
-      email: "admin@wiings.local",
       passwordHash: adminPasswordHash,
     },
     create: {
       username: "admin",
       name: "Administrator",
       role: UserRole.ADMIN,
-      email: "admin@wiings.local",
       passwordHash: adminPasswordHash,
     },
   });
