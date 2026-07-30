@@ -97,6 +97,16 @@ a {
   backdrop-filter: blur(14px);
 }
 
+.theme-dark .signout-button {
+  background-color: #0f172a;
+  border-color: #475569;
+  color: #f8fafc;
+}
+
+.theme-dark .signout-button:hover {
+  background-color: #1e293b;
+}
+
 .theme-dark input,
 .theme-dark select,
 .theme-dark textarea {

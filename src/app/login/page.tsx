@@ -16,9 +16,6 @@ export default async function LoginPage() {
     <div className="w-full max-w-md rounded-3xl border border-slate-800 bg-slate-900/90 p-6 shadow-2xl shadow-cyan-950/20 sm:p-8">
       <p className="text-xs uppercase tracking-[0.3em] text-cyan-300">Wiings</p>
       <h1 className="mt-3 text-3xl font-semibold text-white">{text.loginTitle}</h1>
-      <p className="mt-3 text-sm leading-6 text-slate-300">
-        {text.loginBody}
-      </p>
       <form action={loginAction} className="mt-6 grid gap-4">
         <label className="grid gap-2 text-sm font-medium text-slate-200">
           {text.username}

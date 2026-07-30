@@ -61,7 +61,6 @@ export default async function RootLayout({
             <div className="border-b border-slate-800 px-4 py-5 sm:px-6 sm:py-6">
               <p className="text-xs uppercase tracking-[0.3em] text-cyan-300">Wiings</p>
               <h1 className="mt-2 text-2xl font-semibold">{text.appTitle}</h1>
-              <p className="mt-2 text-sm text-slate-400">{text.appDescription}</p>
             </div>
             <nav className="flex gap-2 overflow-x-auto px-3 py-4 lg:grid lg:gap-1 lg:overflow-visible">
               {navigation.map(({ href, label, icon: Icon }) => (
@@ -96,7 +95,7 @@ export default async function RootLayout({
                       {text.greeting} {user.name || user.username}
                     </p>
                     <form action={logoutAction}>
-                      <button type="submit" className="inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white/80 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50">
+                      <button type="submit" className="signout-button inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white/80 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50">
                         <LogOut className="h-4 w-4" />
                         {text.signOut}
                       </button>

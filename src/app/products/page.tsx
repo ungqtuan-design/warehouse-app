@@ -1,3 +1,5 @@
+import { ChevronsUpDown } from "lucide-react";
+
 import { createProductAction } from "@/app/actions/warehouse";
 import { requireUser } from "@/lib/auth";
 import { getUiContext } from "@/lib/ui";
@@ -93,8 +95,8 @@ export default async function ProductsPage() {
             <p className="text-sm font-medium text-slate-500">{text.createProduct}</p>
             <h2 className="text-xl font-semibold text-slate-950">{text.newCatalogItem}</h2>
           </div>
-          <div className="rounded-full bg-slate-100 px-4 py-2 text-sm font-medium text-slate-700">
-            {text.collapsedByDefault}
+          <div className="inline-flex items-center rounded-full border border-slate-400 bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm">
+            <ChevronsUpDown className="h-4 w-4" />
           </div>
         </summary>
         <form action={createProductAction} className="mt-5 grid gap-4 lg:grid-cols-2">
