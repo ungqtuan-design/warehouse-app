@@ -33,13 +33,13 @@ const updateProductSchema = productSchema.extend({
 
 const userSchema = z.object({
   username: z.string().trim().min(3),
-  password: z.string().min(3),
+  password: z.string(),
   role: z.nativeEnum(UserRole),
 });
 
 const resetPasswordSchema = z.object({
   userId: z.string().trim().min(1),
-  password: z.string().min(3),
+  password: z.string(),
 });
 
 const updateSupplierSchema = supplierSchema.extend({

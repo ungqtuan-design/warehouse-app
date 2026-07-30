@@ -59,7 +59,7 @@ export function CreateUserForm({ text }: { text: ManageUserText }) {
         </label>
         <label className="grid gap-2 text-sm font-medium text-slate-700">
           {text.password}
-          <input name="password" type="password" minLength={3} autoComplete="new-password" className="rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-cyan-500" placeholder={text.temporaryPasswordPlaceholder} required />
+          <input name="password" type="password" autoComplete="new-password" className="rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-cyan-500" placeholder={text.temporaryPasswordPlaceholder} />
         </label>
         <label className="grid gap-2 text-sm font-medium text-slate-700">
           {text.role}
@@ -105,10 +105,8 @@ export function ResetPasswordForm({ text, userId }: { text: ManageUserText; user
           <input
             name="password"
             type="password"
-            minLength={3}
             className="rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-cyan-500"
             placeholder={text.newPasswordPlaceholder}
-            required
           />
         </label>
         <button type="submit" disabled={pending} className={secondaryActionButtonClass}>
