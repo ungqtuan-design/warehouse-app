@@ -1,6 +1,6 @@
 "use server";
 
-import { Prisma } from "@prisma/client";
+import { LocationCode, Prisma } from "@prisma/client";
 import { UserRole } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -41,6 +41,17 @@ const resetPasswordSchema = z.object({
 
 const updateSupplierSchema = supplierSchema.extend({
   supplierId: z.string().trim().min(1),
+});
+
+const inboundLineSchema = z.object({
+  productId: z.string().trim().min(1),
+  quantity: z.coerce.number().int().min(1),
+  note: z.string().trim().optional(),
+});
+
+const inboundBatchSchema = z.object({
+  referenceNo: z.string().trim().optional(),
+  lines: z.array(inboundLineSchema).min(1),
 });
 
 function toOptionalValue(value: string | undefined) {
@@ -199,6 +210,79 @@ export async function updateSupplierAction(formData: FormData) {
 
   revalidatePath("/suppliers");
   redirect("/suppliers");
+}
+
+export async function createInboundBatchAction(formData: FormData) {
+  const user = await requireUser();
+
+  let rawLines: unknown = [];
+
+  try {
+    rawLines = JSON.parse(String(formData.get("linesJson") ?? "[]"));
+  } catch {
+    redirect("/inbound?error=invalid-lines");
+  }
+
+  const parsed = inboundBatchSchema.parse({
+    referenceNo: String(formData.get("referenceNo") ?? ""),
+    lines: rawLines,
+  });
+
+  const khoTong = await prisma.location.findUnique({
+    where: {
+      code: LocationCode.KHO_TONG,
+    },
+    select: {
+      id: true,
+    },
+  });
+
+  if (!khoTong) {
+    redirect("/inbound?error=missing-kho-tong");
+  }
+
+  await prisma.$transaction(async (tx) => {
+    for (const line of parsed.lines) {
+      const note = toOptionalValue(line.note);
+      const referenceNo = toOptionalValue(parsed.referenceNo);
+
+      await tx.inventoryTransaction.create({
+        data: {
+          type: "MANUFACTURER_IN",
+          productId: line.productId,
+          quantity: line.quantity,
+          referenceNo,
+          note,
+          destinationLocationId: khoTong.id,
+          createdById: user.id,
+        },
+      });
+
+      await tx.inventoryBalance.upsert({
+        where: {
+          productId_locationId: {
+            productId: line.productId,
+            locationId: khoTong.id,
+          },
+        },
+        update: {
+          quantity: {
+            increment: line.quantity,
+          },
+        },
+        create: {
+          productId: line.productId,
+          locationId: khoTong.id,
+          quantity: line.quantity,
+        },
+      });
+    }
+  });
+
+  revalidatePath("/inbound");
+  revalidatePath("/inventory");
+  revalidatePath("/");
+  redirect("/inbound");
 }
 
 export async function resetUserPasswordAction(formData: FormData) {

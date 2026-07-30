@@ -170,8 +170,26 @@ export async function getInboundRows() {
     product: transaction.product.name,
     supplier: transaction.product.supplier.name,
     quantity: transaction.quantity,
-    destination: transaction.destinationLocation?.name ?? "-",
     note: transaction.note ?? transaction.referenceNo ?? "-",
+  }));
+}
+
+export async function getInboundProductOptions() {
+  const products = await prisma.product.findMany({
+    where: {
+      status: "ACTIVE",
+    },
+    include: {
+      supplier: true,
+    },
+    orderBy: [{ name: "asc" }],
+  });
+
+  return products.map((product) => ({
+    id: product.id,
+    sku: product.sku,
+    name: product.name,
+    supplierName: product.supplier.name,
   }));
 }
 

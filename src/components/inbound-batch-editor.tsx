@@ -1,0 +1,195 @@
+"use client";
+
+import { useState } from "react";
+
+type InboundProductOption = {
+  id: string;
+  sku: string;
+  name: string;
+  supplierName: string;
+};
+
+type InboundBatchText = {
+  referenceNumber: string;
+  manufacturerShipmentReference: string;
+  product: string;
+  supplier: string;
+  quantity: string;
+  note: string;
+  actions: string;
+  submitInboundBatch: string;
+  addRow: string;
+  remove: string;
+  productLookupPlaceholder: string;
+  supplierAutoFilled: string;
+  selectProductFromList: string;
+};
+
+type InboundDraftRow = {
+  id: string;
+  productQuery: string;
+  productId: string;
+  quantity: string;
+  note: string;
+};
+
+function createRow(): InboundDraftRow {
+  return {
+    id: crypto.randomUUID(),
+    productQuery: "",
+    productId: "",
+    quantity: "",
+    note: "",
+  };
+}
+
+export function InboundBatchEditor({
+  action,
+  products,
+  text,
+}: {
+  action: (formData: FormData) => void;
+  products: InboundProductOption[];
+  text: InboundBatchText;
+}) {
+  const [rows, setRows] = useState<InboundDraftRow[]>([createRow()]);
+  const [referenceNo, setReferenceNo] = useState("");
+
+  const optionsByLookup = new Map<string, InboundProductOption>();
+
+  for (const product of products) {
+    optionsByLookup.set(`${product.sku} - ${product.name}`, product);
+    optionsByLookup.set(product.sku, product);
+    optionsByLookup.set(product.name, product);
+  }
+
+  const serializedLines = JSON.stringify(
+    rows
+      .filter((row) => row.productId && Number(row.quantity) > 0)
+      .map((row) => ({
+        productId: row.productId,
+        quantity: Number(row.quantity),
+        note: row.note.trim(),
+      })),
+  );
+
+  const hasInvalidRow = rows.some((row) => !row.productId || !Number.isFinite(Number(row.quantity)) || Number(row.quantity) <= 0);
+
+  function syncRowProduct(rowId: string, nextQuery: string) {
+    const matched = optionsByLookup.get(nextQuery.trim());
+
+    setRows((current) => current.map((row) => row.id === rowId
+      ? {
+          ...row,
+          productQuery: nextQuery,
+          productId: matched?.id ?? "",
+        }
+      : row));
+  }
+
+  return (
+    <form action={action} className="grid gap-4">
+      <label className="grid gap-2 text-sm font-medium text-slate-700">
+        {text.referenceNumber}
+        <input
+          name="referenceNo"
+          value={referenceNo}
+          onChange={(event) => setReferenceNo(event.target.value)}
+          className="rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-cyan-500"
+          placeholder={text.manufacturerShipmentReference}
+        />
+      </label>
+
+      <input type="hidden" name="linesJson" value={serializedLines} />
+
+      <div className="overflow-x-auto rounded-2xl border border-slate-200">
+        <table className="min-w-[920px] divide-y divide-slate-200 text-left text-sm lg:min-w-full">
+          <thead className="bg-slate-50 text-slate-500">
+            <tr>
+              <th className="px-4 py-3 font-medium">{text.product}</th>
+              <th className="px-4 py-3 font-medium">{text.supplier}</th>
+              <th className="px-4 py-3 font-medium">{text.quantity}</th>
+              <th className="px-4 py-3 font-medium">{text.note}</th>
+              <th className="px-4 py-3 font-medium">{text.actions}</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-200 bg-white">
+            {rows.map((row, index) => {
+              const matchedProduct = products.find((product) => product.id === row.productId) ?? null;
+
+              return (
+                <tr key={row.id}>
+                  <td className="px-4 py-3 align-top">
+                    <input
+                      value={row.productQuery}
+                      onChange={(event) => syncRowProduct(row.id, event.target.value)}
+                      list={`inbound-products-${index}`}
+                      className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-cyan-500"
+                      placeholder={text.productLookupPlaceholder}
+                    />
+                    <datalist id={`inbound-products-${index}`}>
+                      {products.map((product) => (
+                        <option key={product.id} value={`${product.sku} - ${product.name}`}>
+                          {product.supplierName}
+                        </option>
+                      ))}
+                    </datalist>
+                    {!matchedProduct ? <p className="mt-2 text-xs text-amber-700">{text.selectProductFromList}</p> : null}
+                  </td>
+                  <td className="px-4 py-3 align-top text-slate-600">
+                    <div className="rounded-xl bg-slate-50 px-4 py-3">
+                      <div className="font-medium text-slate-900">{matchedProduct?.supplierName ?? "-"}</div>
+                      <div className="mt-1 text-xs text-slate-500">{text.supplierAutoFilled}</div>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 align-top">
+                    <input
+                      type="number"
+                      min="1"
+                      value={row.quantity}
+                      onChange={(event) => setRows((current) => current.map((entry) => entry.id === row.id ? { ...entry, quantity: event.target.value } : entry))}
+                      className="w-28 rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-cyan-500"
+                    />
+                  </td>
+                  <td className="px-4 py-3 align-top">
+                    <input
+                      value={row.note}
+                      onChange={(event) => setRows((current) => current.map((entry) => entry.id === row.id ? { ...entry, note: event.target.value } : entry))}
+                      className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-cyan-500"
+                    />
+                  </td>
+                  <td className="px-4 py-3 align-top">
+                    <button
+                      type="button"
+                      onClick={() => setRows((current) => current.length === 1 ? [createRow()] : current.filter((entry) => entry.id !== row.id))}
+                      className="rounded-xl border border-slate-300 px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                    >
+                      {text.remove}
+                    </button>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <button
+          type="button"
+          onClick={() => setRows((current) => [...current, createRow()])}
+          className="rounded-xl border border-slate-300 px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+        >
+          {text.addRow}
+        </button>
+        <button
+          type="submit"
+          disabled={rows.length === 0 || hasInvalidRow}
+          className="rounded-xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
+        >
+          {text.submitInboundBatch}
+        </button>
+      </div>
+    </form>
+  );
+}
