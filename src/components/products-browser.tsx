@@ -4,6 +4,7 @@ import { useActionState, useEffect, useMemo, useState } from "react";
 import { Pencil } from "lucide-react";
 
 import { updateProductInlineAction } from "@/app/actions/warehouse";
+import { primaryActionButtonClass } from "@/components/action-feedback";
 import { useBasket } from "@/components/basket-provider";
 
 type ProductRow = {
@@ -409,7 +410,7 @@ function ProductEditInlineRow({
             {text.active}
           </label>
           <div className="lg:col-span-2">
-            <button type="submit" disabled={pending} className="rounded-xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400">
+            <button type="submit" disabled={pending} className={primaryActionButtonClass}>
               {text.updateProduct}
             </button>
           </div>

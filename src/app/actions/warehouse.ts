@@ -3,7 +3,6 @@
 import { LocationCode, Prisma } from "@prisma/client";
 import { UserRole } from "@prisma/client";
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import { resizeUploadedImage } from "@/lib/image";
@@ -73,10 +72,17 @@ type ProductUpdateInlineState = {
   message: string;
 };
 
-type BasketSubmitState = {
+export type FormActionState = {
   status: "idle" | "success" | "error";
   message: string;
 };
+
+export const idleFormActionState: FormActionState = {
+  status: "idle",
+  message: "",
+};
+
+type BasketSubmitState = FormActionState;
 
 function toOptionalValue(value: string | undefined) {
   if (!value) {
@@ -98,34 +104,51 @@ function createSku(name: string) {
   return `${base}-${Date.now().toString(36).toUpperCase()}`;
 }
 
-export async function createSupplierAction(formData: FormData) {
+export async function createSupplierAction(
+  _previousState: FormActionState,
+  formData: FormData,
+): Promise<FormActionState> {
   await requireUser();
 
-  const parsed = supplierSchema.parse({
-    name: String(formData.get("name") ?? ""),
-    contactName: String(formData.get("contactName") ?? ""),
-    phone: String(formData.get("phone") ?? ""),
-    email: String(formData.get("email") ?? ""),
-    address: String(formData.get("address") ?? ""),
-    isActive: formData.get("isActive") === "on",
-  });
+  try {
+    const parsed = supplierSchema.parse({
+      name: String(formData.get("name") ?? ""),
+      contactName: String(formData.get("contactName") ?? ""),
+      phone: String(formData.get("phone") ?? ""),
+      email: String(formData.get("email") ?? ""),
+      address: String(formData.get("address") ?? ""),
+      isActive: formData.get("isActive") === "on",
+    });
 
-  await prisma.supplier.create({
-    data: {
-      name: parsed.name,
-      contactName: toOptionalValue(parsed.contactName),
-      phone: toOptionalValue(parsed.phone),
-      email: toOptionalValue(parsed.email),
-      address: toOptionalValue(parsed.address),
-      isActive: parsed.isActive,
-    },
-  });
+    await prisma.supplier.create({
+      data: {
+        name: parsed.name,
+        contactName: toOptionalValue(parsed.contactName),
+        phone: toOptionalValue(parsed.phone),
+        email: toOptionalValue(parsed.email),
+        address: toOptionalValue(parsed.address),
+        isActive: parsed.isActive,
+      },
+    });
+  } catch {
+    return {
+      status: "error",
+      message: "supplier-create-failed",
+    };
+  }
 
   revalidatePath("/suppliers");
-  redirect("/suppliers");
+
+  return {
+    status: "success",
+    message: "supplier-created",
+  };
 }
 
-export async function createProductAction(formData: FormData) {
+export async function createProductAction(
+  _previousState: FormActionState,
+  formData: FormData,
+): Promise<FormActionState> {
   await requireUser();
 
   const imageEntry = formData.get("imageFile");
@@ -133,32 +156,46 @@ export async function createProductAction(formData: FormData) {
 
   if (imageEntry instanceof File && imageEntry.size > 0) {
     if (!imageEntry.type.startsWith("image/")) {
-      redirect("/products?error=invalid-image");
+      return {
+        status: "error",
+        message: "invalid-image",
+      };
     }
 
     imageDataUrl = await resizeUploadedImage(imageEntry);
   }
 
-  const parsed = productSchema.parse({
-    name: String(formData.get("name") ?? ""),
-    supplierId: String(formData.get("supplierId") ?? ""),
-    leadTimeDays: formData.get("leadTimeDays") ?? "0",
-    isActive: formData.get("isActive") === "on",
-  });
+  try {
+    const parsed = productSchema.parse({
+      name: String(formData.get("name") ?? ""),
+      supplierId: String(formData.get("supplierId") ?? ""),
+      leadTimeDays: formData.get("leadTimeDays") ?? "0",
+      isActive: formData.get("isActive") === "on",
+    });
 
-  await prisma.product.create({
-    data: {
-      sku: createSku(parsed.name),
-      name: parsed.name,
-      supplierId: parsed.supplierId,
-      imageUrl: imageDataUrl,
-      leadTimeDays: parsed.leadTimeDays,
-      status: parsed.isActive ? "ACTIVE" : "INACTIVE",
-    },
-  });
+    await prisma.product.create({
+      data: {
+        sku: createSku(parsed.name),
+        name: parsed.name,
+        supplierId: parsed.supplierId,
+        imageUrl: imageDataUrl,
+        leadTimeDays: parsed.leadTimeDays,
+        status: parsed.isActive ? "ACTIVE" : "INACTIVE",
+      },
+    });
+  } catch {
+    return {
+      status: "error",
+      message: "product-create-failed",
+    };
+  }
 
   revalidatePath("/products");
-  redirect("/products");
+
+  return {
+    status: "success",
+    message: "product-created",
+  };
 }
 
 export async function updateProductInlineAction(
@@ -217,7 +254,10 @@ export async function updateProductInlineAction(
   };
 }
 
-export async function createUserAction(formData: FormData) {
+export async function createUserAction(
+  _previousState: FormActionState,
+  formData: FormData,
+): Promise<FormActionState> {
   await requireAdmin();
 
   const parsed = userSchema.parse({
@@ -236,7 +276,10 @@ export async function createUserAction(formData: FormData) {
   });
 
   if (existingUser) {
-    redirect("/manage-users?error=username-taken");
+    return {
+      status: "error",
+      message: "username-taken",
+    };
   }
 
   try {
@@ -249,48 +292,75 @@ export async function createUserAction(formData: FormData) {
     });
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
-      redirect("/manage-users?error=username-taken");
+      return {
+        status: "error",
+        message: "username-taken",
+      };
     }
 
-    throw error;
+    return {
+      status: "error",
+      message: "user-create-failed",
+    };
   }
 
   revalidatePath("/manage-users");
-  redirect("/manage-users");
+
+  return {
+    status: "success",
+    message: "user-created",
+  };
 }
 
-export async function updateSupplierAction(formData: FormData) {
+export async function updateSupplierAction(
+  _previousState: FormActionState,
+  formData: FormData,
+): Promise<FormActionState> {
   await requireUser();
 
-  const parsed = updateSupplierSchema.parse({
-    supplierId: String(formData.get("supplierId") ?? ""),
-    name: String(formData.get("name") ?? ""),
-    contactName: String(formData.get("contactName") ?? ""),
-    phone: String(formData.get("phone") ?? ""),
-    email: String(formData.get("email") ?? ""),
-    address: String(formData.get("address") ?? ""),
-    isActive: formData.get("isActive") === "on",
-  });
+  try {
+    const parsed = updateSupplierSchema.parse({
+      supplierId: String(formData.get("supplierId") ?? ""),
+      name: String(formData.get("name") ?? ""),
+      contactName: String(formData.get("contactName") ?? ""),
+      phone: String(formData.get("phone") ?? ""),
+      email: String(formData.get("email") ?? ""),
+      address: String(formData.get("address") ?? ""),
+      isActive: formData.get("isActive") === "on",
+    });
 
-  await prisma.supplier.update({
-    where: {
-      id: parsed.supplierId,
-    },
-    data: {
-      name: parsed.name,
-      contactName: toOptionalValue(parsed.contactName),
-      phone: toOptionalValue(parsed.phone),
-      email: toOptionalValue(parsed.email),
-      address: toOptionalValue(parsed.address),
-      isActive: parsed.isActive,
-    },
-  });
+    await prisma.supplier.update({
+      where: {
+        id: parsed.supplierId,
+      },
+      data: {
+        name: parsed.name,
+        contactName: toOptionalValue(parsed.contactName),
+        phone: toOptionalValue(parsed.phone),
+        email: toOptionalValue(parsed.email),
+        address: toOptionalValue(parsed.address),
+        isActive: parsed.isActive,
+      },
+    });
+  } catch {
+    return {
+      status: "error",
+      message: "supplier-update-failed",
+    };
+  }
 
   revalidatePath("/suppliers");
-  redirect("/suppliers");
+
+  return {
+    status: "success",
+    message: "supplier-updated",
+  };
 }
 
-export async function createInboundBatchAction(formData: FormData) {
+export async function createInboundBatchAction(
+  _previousState: FormActionState,
+  formData: FormData,
+): Promise<FormActionState> {
   const user = await requireUser();
 
   let rawLines: unknown = [];
@@ -298,13 +368,25 @@ export async function createInboundBatchAction(formData: FormData) {
   try {
     rawLines = JSON.parse(String(formData.get("linesJson") ?? "[]"));
   } catch {
-    redirect("/inbound?error=invalid-lines");
+    return {
+      status: "error",
+      message: "invalid-lines",
+    };
   }
 
-  const parsed = inboundBatchSchema.parse({
-    referenceNo: String(formData.get("referenceNo") ?? ""),
-    lines: rawLines,
-  });
+  let parsed: z.infer<typeof inboundBatchSchema>;
+
+  try {
+    parsed = inboundBatchSchema.parse({
+      referenceNo: String(formData.get("referenceNo") ?? ""),
+      lines: rawLines,
+    });
+  } catch {
+    return {
+      status: "error",
+      message: "invalid-lines",
+    };
+  }
 
   const khoTong = await prisma.location.findUnique({
     where: {
@@ -316,51 +398,65 @@ export async function createInboundBatchAction(formData: FormData) {
   });
 
   if (!khoTong) {
-    redirect("/inbound?error=missing-kho-tong");
+    return {
+      status: "error",
+      message: "missing-kho-tong",
+    };
   }
 
-  await prisma.$transaction(async (tx) => {
-    for (const line of parsed.lines) {
-      const note = toOptionalValue(line.note);
-      const referenceNo = toOptionalValue(parsed.referenceNo);
+  try {
+    await prisma.$transaction(async (tx) => {
+      for (const line of parsed.lines) {
+        const note = toOptionalValue(line.note);
+        const referenceNo = toOptionalValue(parsed.referenceNo);
 
-      await tx.inventoryTransaction.create({
-        data: {
-          type: "MANUFACTURER_IN",
-          productId: line.productId,
-          quantity: line.quantity,
-          referenceNo,
-          note,
-          destinationLocationId: khoTong.id,
-          createdById: user.id,
-        },
-      });
+        await tx.inventoryTransaction.create({
+          data: {
+            type: "MANUFACTURER_IN",
+            productId: line.productId,
+            quantity: line.quantity,
+            referenceNo,
+            note,
+            destinationLocationId: khoTong.id,
+            createdById: user.id,
+          },
+        });
 
-      await tx.inventoryBalance.upsert({
-        where: {
-          productId_locationId: {
+        await tx.inventoryBalance.upsert({
+          where: {
+            productId_locationId: {
+              productId: line.productId,
+              locationId: khoTong.id,
+            },
+          },
+          update: {
+            quantity: {
+              increment: line.quantity,
+            },
+          },
+          create: {
             productId: line.productId,
             locationId: khoTong.id,
+            quantity: line.quantity,
           },
-        },
-        update: {
-          quantity: {
-            increment: line.quantity,
-          },
-        },
-        create: {
-          productId: line.productId,
-          locationId: khoTong.id,
-          quantity: line.quantity,
-        },
-      });
-    }
-  });
+        });
+      }
+    });
+  } catch {
+    return {
+      status: "error",
+      message: "inbound-submit-failed",
+    };
+  }
 
   revalidatePath("/inbound");
   revalidatePath("/inventory");
   revalidatePath("/");
-  redirect("/inbound");
+
+  return {
+    status: "success",
+    message: "inbound-created",
+  };
 }
 
 export async function submitBasketAction(
@@ -490,26 +586,40 @@ export async function submitBasketAction(
   };
 }
 
-export async function resetUserPasswordAction(formData: FormData) {
+export async function resetUserPasswordAction(
+  _previousState: FormActionState,
+  formData: FormData,
+): Promise<FormActionState> {
   await requireAdmin();
 
-  const parsed = resetPasswordSchema.parse({
-    userId: String(formData.get("userId") ?? ""),
-    password: String(formData.get("password") ?? ""),
-  });
+  try {
+    const parsed = resetPasswordSchema.parse({
+      userId: String(formData.get("userId") ?? ""),
+      password: String(formData.get("password") ?? ""),
+    });
 
-  await prisma.user.update({
-    where: {
-      id: parsed.userId,
-    },
-    data: {
-      passwordHash: hashPassword(parsed.password),
-      sessions: {
-        deleteMany: {},
+    await prisma.user.update({
+      where: {
+        id: parsed.userId,
       },
-    },
-  });
+      data: {
+        passwordHash: hashPassword(parsed.password),
+        sessions: {
+          deleteMany: {},
+        },
+      },
+    });
+  } catch {
+    return {
+      status: "error",
+      message: "password-reset-failed",
+    };
+  }
 
   revalidatePath("/manage-users");
-  redirect("/manage-users?passwordReset=1");
+
+  return {
+    status: "success",
+    message: "password-reset",
+  };
 }

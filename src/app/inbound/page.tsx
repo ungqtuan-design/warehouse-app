@@ -1,4 +1,3 @@
-import { createInboundBatchAction } from "@/app/actions/warehouse";
 import { InboundBatchEditor } from "@/components/inbound-batch-editor";
 import { requireUser } from "@/lib/auth";
 import { getUiContext } from "@/lib/ui";
@@ -49,7 +48,7 @@ export default async function InboundPage() {
         <p className="text-sm font-medium text-slate-500">{text.addInboundBatch}</p>
         <h2 className="mt-1 text-xl font-semibold text-slate-950">{text.multiLineForm}</h2>
         <div className="mt-5">
-          <InboundBatchEditor action={createInboundBatchAction} products={products} text={text} />
+          <InboundBatchEditor products={products} text={text} />
         </div>
       </section>
     </div>

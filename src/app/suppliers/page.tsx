@@ -1,6 +1,6 @@
 import { ChevronsUpDown } from "lucide-react";
 
-import { createSupplierAction, updateSupplierAction } from "@/app/actions/warehouse";
+import { SupplierCreateForm, SupplierUpdateForm } from "@/components/supplier-forms";
 import { requireUser } from "@/lib/auth";
 import { getUiContext } from "@/lib/ui";
 import { getSuppliers } from "@/lib/warehouse-data";
@@ -63,38 +63,7 @@ export default async function SuppliersPage() {
                           {text.update}
                         </span>
                       </summary>
-                      <form action={updateSupplierAction} className="grid gap-4 border-t border-slate-200 bg-slate-50 px-4 py-4">
-                        <input type="hidden" name="supplierId" value={supplier.id} />
-                        <label className="grid gap-2 text-sm font-medium text-slate-700">
-                          {text.supplier}
-                          <input name="name" defaultValue={supplier.name} className="rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-cyan-500" required />
-                        </label>
-                        <label className="grid gap-2 text-sm font-medium text-slate-700">
-                          {text.contactPerson}
-                          <input name="contactName" defaultValue={supplier.contactName ?? ""} className="rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-cyan-500" />
-                        </label>
-                        <div className="grid gap-4 sm:grid-cols-2">
-                          <label className="grid gap-2 text-sm font-medium text-slate-700">
-                            {text.phone}
-                            <input name="phone" defaultValue={supplier.phone ?? ""} className="rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-cyan-500" />
-                          </label>
-                          <label className="grid gap-2 text-sm font-medium text-slate-700">
-                            {text.email}
-                            <input name="email" type="email" defaultValue={supplier.email ?? ""} className="rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-cyan-500" />
-                          </label>
-                        </div>
-                        <label className="grid gap-2 text-sm font-medium text-slate-700">
-                          {text.address}
-                          <textarea name="address" defaultValue={supplier.address ?? ""} className="min-h-28 rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-cyan-500" />
-                        </label>
-                        <label className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700">
-                          <input name="isActive" type="checkbox" className="h-4 w-4 rounded border-slate-300" defaultChecked={supplier.isActive} />
-                          {text.active}
-                        </label>
-                        <button type="submit" className="rounded-xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 sm:w-auto">
-                          {text.updateSupplier}
-                        </button>
-                      </form>
+                      <SupplierUpdateForm supplier={supplier} text={text} />
                     </details>
                   </td>
                 </tr>
@@ -114,37 +83,7 @@ export default async function SuppliersPage() {
             <ChevronsUpDown className="h-4 w-4" />
           </div>
         </summary>
-        <form action={createSupplierAction} className="mt-5 grid gap-4">
-          <label className="grid gap-2 text-sm font-medium text-slate-700">
-            {text.supplier}
-            <input name="name" className="rounded-xl border border-slate-300 px-4 py-3 outline-none ring-0 transition focus:border-cyan-500" placeholder={text.enterSupplierName} required />
-          </label>
-          <label className="grid gap-2 text-sm font-medium text-slate-700">
-            {text.contactPerson}
-            <input name="contactName" className="rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-cyan-500" placeholder={text.contactPersonPlaceholder} />
-          </label>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <label className="grid gap-2 text-sm font-medium text-slate-700">
-              {text.phone}
-              <input name="phone" className="rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-cyan-500" placeholder={text.phoneNumberPlaceholder} />
-            </label>
-            <label className="grid gap-2 text-sm font-medium text-slate-700">
-              {text.email}
-              <input name="email" type="email" className="rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-cyan-500" placeholder={text.emailAddressPlaceholder} />
-            </label>
-          </div>
-          <label className="grid gap-2 text-sm font-medium text-slate-700">
-            {text.address}
-            <textarea name="address" className="min-h-28 rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-cyan-500" placeholder={text.basicSupplierAddressPlaceholder} />
-          </label>
-          <label className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-700">
-            <input name="isActive" type="checkbox" className="h-4 w-4 rounded border-slate-300" defaultChecked />
-            {text.active}
-          </label>
-          <button type="submit" className="w-full rounded-xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 sm:w-auto">
-            {text.saveSupplier}
-          </button>
-        </form>
+        <SupplierCreateForm text={text} />
       </details>
     </div>
   );

@@ -2,8 +2,10 @@
 
 import { useActionState, useEffect, useMemo, useState } from "react";
 import { Ban } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 import { submitBasketAction } from "@/app/actions/warehouse";
+import { ActionToast, primaryActionButtonClass, secondaryActionButtonClass, type ActionNotice } from "@/components/action-feedback";
 import { useBasket } from "@/components/basket-provider";
 
 type BasketWorkspaceText = {
@@ -19,7 +21,8 @@ type BasketWorkspaceText = {
   clearBasket: string;
   totalBasketItems: string;
   note: string;
-  confirmIssue: string;
+  submit: string;
+  submitting: string;
   basketSubmitSuccess: string;
   basketSubmitError: string;
   basketStockError: string;
@@ -46,8 +49,10 @@ export function BasketWorkspace({
   text: BasketWorkspaceText;
   historyRows: BasketHistoryRow[];
 }) {
+  const router = useRouter();
   const { items, totalCount, removeItem, clearBasket } = useBasket();
   const [lineNotes, setLineNotes] = useState<Record<string, string>>({});
+  const [notice, setNotice] = useState<ActionNotice>(null);
   const [state, formAction, pending] = useActionState(submitBasketAction, {
     status: "idle" as const,
     message: "",
@@ -64,14 +69,18 @@ export function BasketWorkspace({
     if (state.status === "success") {
       clearBasket();
       setLineNotes({});
+      router.refresh();
+      setNotice({ kind: "success", message: text.basketSubmitSuccess });
+      return;
     }
-  }, [clearBasket, state.status]);
 
-  const submitMessage = state.status === "success"
-    ? text.basketSubmitSuccess
-    : state.status === "error"
-      ? (state.message === "One or more basket items exceed available stock." ? text.basketStockError : text.basketSubmitError)
-      : "";
+    if (state.status === "error") {
+      setNotice({
+        kind: "error",
+        message: state.message === "One or more basket items exceed available stock." ? text.basketStockError : text.basketSubmitError,
+      });
+    }
+  }, [clearBasket, router, state.message, state.status, text.basketStockError, text.basketSubmitError, text.basketSubmitSuccess]);
 
   return (
     <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -136,13 +145,12 @@ export function BasketWorkspace({
 
           <input type="hidden" name="linesJson" value={serializedLines} />
 
-          {submitMessage ? <p className={`text-sm ${state.status === "success" ? "text-emerald-700" : "text-rose-700"}`}>{submitMessage}</p> : null}
           <div className="flex flex-col gap-3 sm:flex-row">
-            <button type="button" onClick={clearBasket} className="rounded-xl border border-slate-300 px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
+            <button type="button" onClick={clearBasket} className={secondaryActionButtonClass}>
               {text.clearBasket}
             </button>
-            <button type="submit" disabled={pending || items.length === 0} className="rounded-xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400">
-              {text.confirmIssue}
+            <button type="submit" disabled={pending || items.length === 0} className={primaryActionButtonClass}>
+              {pending ? text.submitting : text.submit}
             </button>
           </div>
         </form>
@@ -186,6 +194,7 @@ export function BasketWorkspace({
           </table>
         </div>
       </div>
+      <ActionToast notice={notice} onClose={() => setNotice(null)} />
     </section>
   );
 }

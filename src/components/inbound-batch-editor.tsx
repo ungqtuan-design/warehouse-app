@@ -1,6 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+
+import { createInboundBatchAction, idleFormActionState } from "@/app/actions/warehouse";
+import { ActionToast, primaryActionButtonClass, secondaryActionButtonClass, type ActionNotice } from "@/components/action-feedback";
 
 type InboundProductOption = {
   id: string;
@@ -17,12 +21,15 @@ type InboundBatchText = {
   quantity: string;
   note: string;
   actions: string;
-  submitInboundBatch: string;
   addRow: string;
   remove: string;
   productLookupPlaceholder: string;
   supplierAutoFilled: string;
   selectProductFromList: string;
+  submit: string;
+  submitting: string;
+  inboundSubmitSuccess: string;
+  inboundSubmitError: string;
 };
 
 type InboundDraftRow = {
@@ -44,16 +51,18 @@ function createRow(): InboundDraftRow {
 }
 
 export function InboundBatchEditor({
-  action,
   products,
   text,
 }: {
-  action: (formData: FormData) => void;
   products: InboundProductOption[];
   text: InboundBatchText;
 }) {
+  const router = useRouter();
+  const formRef = useRef<HTMLFormElement>(null);
   const [rows, setRows] = useState<InboundDraftRow[]>([createRow()]);
   const [referenceNo, setReferenceNo] = useState("");
+  const [notice, setNotice] = useState<ActionNotice>(null);
+  const [state, formAction, pending] = useActionState(createInboundBatchAction, idleFormActionState);
 
   const optionsByLookup = new Map<string, InboundProductOption>();
 
@@ -75,6 +84,21 @@ export function InboundBatchEditor({
 
   const hasInvalidRow = rows.some((row) => !row.productId || !Number.isFinite(Number(row.quantity)) || Number(row.quantity) <= 0);
 
+  useEffect(() => {
+    if (state.status === "success") {
+      formRef.current?.reset();
+      setRows([createRow()]);
+      setReferenceNo("");
+      router.refresh();
+      setNotice({ kind: "success", message: text.inboundSubmitSuccess });
+      return;
+    }
+
+    if (state.status === "error") {
+      setNotice({ kind: "error", message: text.inboundSubmitError });
+    }
+  }, [router, state.status, text.inboundSubmitError, text.inboundSubmitSuccess]);
+
   function syncRowProduct(rowId: string, nextQuery: string) {
     const matched = optionsByLookup.get(nextQuery.trim());
 
@@ -88,7 +112,8 @@ export function InboundBatchEditor({
   }
 
   return (
-    <form action={action} className="grid gap-4">
+    <>
+    <form ref={formRef} action={formAction} className="grid gap-4">
       <label className="grid gap-2 text-sm font-medium text-slate-700">
         {text.referenceNumber}
         <input
@@ -162,7 +187,7 @@ export function InboundBatchEditor({
                     <button
                       type="button"
                       onClick={() => setRows((current) => current.length === 1 ? [createRow()] : current.filter((entry) => entry.id !== row.id))}
-                      className="rounded-xl border border-slate-300 px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                      className={secondaryActionButtonClass}
                     >
                       {text.remove}
                     </button>
@@ -178,18 +203,20 @@ export function InboundBatchEditor({
         <button
           type="button"
           onClick={() => setRows((current) => [...current, createRow()])}
-          className="rounded-xl border border-slate-300 px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+          className={secondaryActionButtonClass}
         >
           {text.addRow}
         </button>
         <button
           type="submit"
-          disabled={rows.length === 0 || hasInvalidRow}
-          className="rounded-xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-600 disabled:text-slate-100"
+          disabled={pending || rows.length === 0 || hasInvalidRow}
+          className={primaryActionButtonClass}
         >
-          {text.submitInboundBatch}
+          {pending ? text.submitting : text.submit}
         </button>
       </div>
     </form>
+    <ActionToast notice={notice} onClose={() => setNotice(null)} />
+    </>
   );
 }
