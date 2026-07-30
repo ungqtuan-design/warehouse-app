@@ -5,6 +5,13 @@ EXCEPTION
   WHEN duplicate_object THEN NULL;
 END $$;
 
+DO $$
+BEGIN
+  CREATE TYPE "ProductStatus" AS ENUM ('ACTIVE', 'INACTIVE');
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END $$;
+
 ALTER TABLE "User"
   ADD COLUMN IF NOT EXISTS "username" TEXT,
   ADD COLUMN IF NOT EXISTS "passwordHash" TEXT,
@@ -44,6 +51,30 @@ CREATE TABLE IF NOT EXISTS "UserSession" (
 CREATE UNIQUE INDEX IF NOT EXISTS "UserSession_tokenHash_key" ON "UserSession"("tokenHash");
 CREATE INDEX IF NOT EXISTS "UserSession_userId_idx" ON "UserSession"("userId");
 CREATE INDEX IF NOT EXISTS "UserSession_expiresAt_idx" ON "UserSession"("expiresAt");
+
+ALTER TABLE "Supplier"
+  ADD COLUMN IF NOT EXISTS "contactName" TEXT,
+  ADD COLUMN IF NOT EXISTS "phone" TEXT,
+  ADD COLUMN IF NOT EXISTS "email" TEXT,
+  ADD COLUMN IF NOT EXISTS "address" TEXT,
+  ADD COLUMN IF NOT EXISTS "isActive" BOOLEAN NOT NULL DEFAULT TRUE;
+
+ALTER TABLE "Product"
+  ADD COLUMN IF NOT EXISTS "imageUrl" TEXT,
+  ADD COLUMN IF NOT EXISTS "leadTimeDays" INTEGER NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS "status" "ProductStatus" NOT NULL DEFAULT 'ACTIVE',
+  ADD COLUMN IF NOT EXISTS "isObsolete" BOOLEAN NOT NULL DEFAULT FALSE,
+  ADD COLUMN IF NOT EXISTS "obsoleteAt" TIMESTAMP(3);
+
+CREATE INDEX IF NOT EXISTS "Product_status_isObsolete_idx" ON "Product"("status", "isObsolete");
+
+ALTER TABLE "InventoryTransaction"
+  ADD COLUMN IF NOT EXISTS "referenceNo" TEXT,
+  ADD COLUMN IF NOT EXISTS "note" TEXT,
+  ADD COLUMN IF NOT EXISTS "customerName" TEXT,
+  ADD COLUMN IF NOT EXISTS "sourceLocationId" TEXT,
+  ADD COLUMN IF NOT EXISTS "destinationLocationId" TEXT,
+  ADD COLUMN IF NOT EXISTS "createdById" TEXT;
 
 INSERT INTO "User" ("id", "username", "passwordHash", "email", "name", "role", "createdAt", "updatedAt")
 VALUES (
