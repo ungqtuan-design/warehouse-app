@@ -25,14 +25,36 @@ enum LocationCode {
   KHO_LE
 }
 
+enum UserRole {
+  ADMIN
+  OPERATION
+}
+
 model User {
-  id                    String                 @id @default(cuid())
-  email                 String                 @unique
-  name                  String
-  role                  String                 @default("admin")
-  createdAt             DateTime               @default(now())
-  updatedAt             DateTime               @updatedAt
-  createdTransactions   InventoryTransaction[] @relation("TransactionCreatedBy")
+  id                  String                 @id @default(cuid())
+  username            String                 @unique
+  passwordHash        String
+  email               String?                @unique
+  name                String
+  role                UserRole               @default(ADMIN)
+  createdAt           DateTime               @default(now())
+  updatedAt           DateTime               @updatedAt
+  createdTransactions InventoryTransaction[] @relation("TransactionCreatedBy")
+  sessions            UserSession[]
+
+  @@index([username])
+}
+
+model UserSession {
+  id        String   @id @default(cuid())
+  tokenHash String   @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
 }
 
 model Supplier {
@@ -55,6 +77,7 @@ model Product {
   sku                   String                 @unique
   name                  String
   imageUrl              String?
+  leadTimeDays          Int                    @default(0)
   status                ProductStatus          @default(ACTIVE)
   isObsolete            Boolean                @default(false)
   obsoleteAt            DateTime?

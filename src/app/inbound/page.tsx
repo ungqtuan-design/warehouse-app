@@ -1,23 +1,27 @@
 import { getInboundRows } from "@/lib/warehouse-data";
+import { requireUser } from "@/lib/auth";
+import { getUiContext } from "@/lib/ui";
 
 export default async function InboundPage() {
-  const inboundRows = await getInboundRows();
+  await requireUser();
+
+  const [inboundRows, { text }] = await Promise.all([getInboundRows(), getUiContext()]);
 
   return (
     <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
       <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <p className="text-sm font-medium text-slate-500">Inbound receiving</p>
-        <h1 className="mt-1 text-2xl font-semibold text-slate-950">Receive into kho tong</h1>
+        <p className="text-sm font-medium text-slate-500">{text.inboundReceiving}</p>
+        <h1 className="mt-1 text-2xl font-semibold text-slate-950">{text.receiveIntoKhoTong}</h1>
         <p className="mt-2 max-w-2xl text-sm text-slate-600">
           For MVP, manufacturer receipts can only increase stock in kho tong. Multiple lines can be submitted together.
         </p>
 
-        <div className="mt-5 overflow-hidden rounded-2xl border border-slate-200">
-          <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
+        <div className="mt-5 overflow-x-auto rounded-2xl border border-slate-200">
+          <table className="min-w-[720px] divide-y divide-slate-200 text-left text-sm lg:min-w-full">
             <thead className="bg-slate-50 text-slate-500">
               <tr>
-                <th className="px-4 py-3 font-medium">Product</th>
-                <th className="px-4 py-3 font-medium">Supplier</th>
+                <th className="px-4 py-3 font-medium">{text.product}</th>
+                <th className="px-4 py-3 font-medium">{text.supplier}</th>
                 <th className="px-4 py-3 font-medium">Qty</th>
                 <th className="px-4 py-3 font-medium">Destination</th>
                 <th className="px-4 py-3 font-medium">Note</th>

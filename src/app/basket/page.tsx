@@ -1,19 +1,23 @@
 import { getBasketRows } from "@/lib/warehouse-data";
+import { requireUser } from "@/lib/auth";
+import { getUiContext } from "@/lib/ui";
 
 export default async function BasketPage() {
-  const basketRows = await getBasketRows();
+  await requireUser();
+
+  const [basketRows, { text }] = await Promise.all([getBasketRows(), getUiContext()]);
 
   return (
     <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
       <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <p className="text-sm font-medium text-slate-500">Outbound basket</p>
-        <h1 className="mt-1 text-2xl font-semibold text-slate-950">Issue from kho le</h1>
-        <div className="mt-5 overflow-hidden rounded-2xl border border-slate-200">
-          <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
+        <p className="text-sm font-medium text-slate-500">{text.outboundBasket}</p>
+        <h1 className="mt-1 text-2xl font-semibold text-slate-950">{text.issueFromKhoLe}</h1>
+        <div className="mt-5 overflow-x-auto rounded-2xl border border-slate-200">
+          <table className="min-w-[760px] divide-y divide-slate-200 text-left text-sm lg:min-w-full">
             <thead className="bg-slate-50 text-slate-500">
               <tr>
                 <th className="px-4 py-3 font-medium">SKU</th>
-                <th className="px-4 py-3 font-medium">Product</th>
+                <th className="px-4 py-3 font-medium">{text.product}</th>
                 <th className="px-4 py-3 font-medium">Available</th>
                 <th className="px-4 py-3 font-medium">Quantity</th>
                 <th className="px-4 py-3 font-medium">Customer</th>
@@ -31,7 +35,7 @@ export default async function BasketPage() {
                   <td className="px-4 py-3 font-medium text-slate-900">{line.sku}</td>
                   <td className="px-4 py-3">
                     <div className="font-medium text-slate-900">{line.product}</div>
-                    <div className="text-xs text-slate-500">Source: {line.source}</div>
+                      <div className="text-xs text-slate-500">Source: {line.source}</div>
                   </td>
                   <td className="px-4 py-3 text-slate-600">{line.available}</td>
                   <td className="px-4 py-3 text-slate-600">{line.quantity}</td>
@@ -44,8 +48,8 @@ export default async function BasketPage() {
       </section>
 
       <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <p className="text-sm font-medium text-slate-500">Checkout basket</p>
-        <h2 className="mt-1 text-xl font-semibold text-slate-950">Customer issue</h2>
+        <p className="text-sm font-medium text-slate-500">{text.basket}</p>
+        <h2 className="mt-1 text-xl font-semibold text-slate-950">{text.issueFromKhoLe}</h2>
         <form className="mt-5 grid gap-4">
           <label className="grid gap-2 text-sm font-medium text-slate-700">
             Customer name
