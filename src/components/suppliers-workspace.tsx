@@ -33,6 +33,7 @@ type SuppliersWorkspaceText = {
   search: string;
   includeInactive: string;
   searchSupplierContactEmailAddress: string;
+  searchSupplierPrompt: string;
   noSupplierMatches: string;
   enterSupplierName: string;
   contactPersonPlaceholder: string;
@@ -58,6 +59,7 @@ export function SuppliersWorkspace({
   const [queryInput, setQueryInput] = useState("");
   const [query, setQuery] = useState("");
   const [includeInactive, setIncludeInactive] = useState(false);
+  const [hasSearched, setHasSearched] = useState(false);
 
   const results = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -106,7 +108,10 @@ export function SuppliersWorkspace({
             <input type="checkbox" checked={includeInactive} onChange={(event) => setIncludeInactive(event.target.checked)} className="h-4 w-4 rounded border-slate-300" />
             {text.includeInactive}
           </label>
-          <button type="button" onClick={() => setQuery(queryInput)} className="rounded-xl bg-cyan-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-cyan-500">
+          <button type="button" onClick={() => {
+            setHasSearched(true);
+            setQuery(queryInput);
+          }} className="rounded-xl bg-cyan-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-cyan-500">
             {text.search}
           </button>
         </div>
@@ -128,6 +133,12 @@ export function SuppliersWorkspace({
                 <tr>
                   <td colSpan={6} className="px-4 py-10 text-center text-sm text-slate-500">
                     {text.noSuppliersRows}
+                  </td>
+                </tr>
+              ) : !hasSearched ? (
+                <tr>
+                  <td colSpan={6} className="px-4 py-10 text-center text-sm text-slate-500">
+                    {text.searchSupplierPrompt}
                   </td>
                 </tr>
               ) : results.length === 0 ? (

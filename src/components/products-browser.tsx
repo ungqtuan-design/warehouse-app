@@ -1,7 +1,8 @@
 "use client";
 
-import { useActionState, useEffect, useMemo, useState } from "react";
+import { startTransition, useActionState, useEffect, useMemo, useRef, useState } from "react";
 import { Check, Pencil } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 import { updateProductInlineAction } from "@/app/actions/warehouse";
 import { useBasket } from "@/components/basket-provider";
@@ -277,22 +278,35 @@ function ProductTableRows({
   onBasketAdd: () => void;
   onEditResult: (kind: "success" | "error", message: string) => void;
 }) {
+  const router = useRouter();
   const editFormId = `product-inline-edit-${product.id}`;
+  const handledStateRef = useRef<string>("idle:");
   const [state, formAction, pending] = useActionState(updateProductInlineAction, {
     status: "idle" as const,
     message: "",
   });
 
   useEffect(() => {
+    const currentStateKey = `${state.status}:${state.message}`;
+
+    if (handledStateRef.current === currentStateKey) {
+      return;
+    }
+
+    handledStateRef.current = currentStateKey;
+
     if (state.status === "success") {
       onEditResult("success", text.updateProductSuccess);
+      startTransition(() => {
+        router.refresh();
+      });
     }
 
     if (state.status === "error") {
       const message = state.message === "Invalid image file." ? text.invalidImageMessage : text.updateProductError;
       onEditResult("error", message);
     }
-  }, [onEditResult, state.message, state.status, text.invalidImageMessage, text.updateProductError, text.updateProductSuccess]);
+  }, [onEditResult, router, state.message, state.status, text.invalidImageMessage, text.updateProductError, text.updateProductSuccess]);
 
   return (
     <>
@@ -300,9 +314,19 @@ function ProductTableRows({
         <td className="px-4 py-3 font-medium text-slate-900">{product.sku}</td>
         <td className="px-4 py-3">
           <button
-            type={isExpanded ? "submit" : "button"}
-            form={isExpanded ? editFormId : undefined}
-            onClick={isExpanded ? undefined : onToggleEdit}
+            type="button"
+            onClick={() => {
+              if (!isExpanded) {
+                onToggleEdit();
+                return;
+              }
+
+              const form = document.getElementById(editFormId);
+
+              if (form instanceof HTMLFormElement) {
+                form.requestSubmit();
+              }
+            }}
             disabled={pending}
             className={`inline-flex rounded-lg border p-2 transition ${isExpanded ? "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100" : "border-slate-300 text-slate-700 hover:bg-slate-50"}`}
             aria-label={isExpanded ? text.updateProduct : text.edit}
