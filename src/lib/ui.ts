@@ -160,6 +160,9 @@ const dictionaries = {
     selectSupplier: "Select supplier",
     noSuppliersRows: "No suppliers in Neon yet.",
     usernameTaken: "This username already exists.",
+    edit: "Edit",
+    editProduct: "Edit products",
+    updateProduct: "Update product",
   },
   vi: {
     appTitle: "Điều phối kho",
@@ -317,6 +320,9 @@ const dictionaries = {
     selectSupplier: "Chọn nhà cung cấp",
     noSuppliersRows: "Chưa có nhà cung cấp nào trong Neon.",
     usernameTaken: "Tên đăng nhập này đã tồn tại.",
+    edit: "Edit",
+    editProduct: "Chỉnh sửa sản phẩm",
+    updateProduct: "Cập nhật sản phẩm",
   },
 } as const;
 

@@ -27,6 +27,10 @@ const productSchema = z.object({
   isActive: z.boolean(),
 });
 
+const updateProductSchema = productSchema.extend({
+  productId: z.string().trim().min(1),
+});
+
 const userSchema = z.object({
   username: z.string().trim().min(3),
   password: z.string().min(3),
@@ -130,6 +134,45 @@ export async function createProductAction(formData: FormData) {
       imageUrl: imageDataUrl,
       leadTimeDays: parsed.leadTimeDays,
       status: parsed.isActive ? "ACTIVE" : "INACTIVE",
+    },
+  });
+
+  revalidatePath("/products");
+  redirect("/products");
+}
+
+export async function updateProductAction(formData: FormData) {
+  await requireUser();
+
+  const imageEntry = formData.get("imageFile");
+  let imageDataUrl: string | null | undefined;
+
+  if (imageEntry instanceof File && imageEntry.size > 0) {
+    if (!imageEntry.type.startsWith("image/")) {
+      redirect("/products?error=invalid-image");
+    }
+
+    imageDataUrl = await resizeUploadedImage(imageEntry);
+  }
+
+  const parsed = updateProductSchema.parse({
+    productId: String(formData.get("productId") ?? ""),
+    name: String(formData.get("name") ?? ""),
+    supplierId: String(formData.get("supplierId") ?? ""),
+    leadTimeDays: formData.get("leadTimeDays") ?? "0",
+    isActive: formData.get("isActive") === "on",
+  });
+
+  await prisma.product.update({
+    where: {
+      id: parsed.productId,
+    },
+    data: {
+      name: parsed.name,
+      supplierId: parsed.supplierId,
+      leadTimeDays: parsed.leadTimeDays,
+      status: parsed.isActive ? "ACTIVE" : "INACTIVE",
+      ...(imageDataUrl === undefined ? {} : { imageUrl: imageDataUrl }),
     },
   });
 

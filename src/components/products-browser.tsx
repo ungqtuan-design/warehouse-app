@@ -51,7 +51,6 @@ type ProductsBrowserText = {
   exceedsStockMessage: string;
   inactiveProductMessage: string;
   addedToBasketMessage: string;
-  selectWarehouseForBasket: string;
 };
 
 type WarehouseFilter = "ALL" | "KHO_TONG" | "KHO_LE";
@@ -236,9 +235,7 @@ export function ProductsBrowser({
                         {text.addToBasket}
                       </button>
                       <p className="text-xs text-slate-500">
-                        {requiresWarehouseSelection
-                          ? text.selectWarehouseForBasket
-                          : product.status !== "ACTIVE"
+                        {product.status !== "ACTIVE"
                           ? text.inactiveProductMessage
                           : parsedQty > availableQty
                             ? text.exceedsStockMessage
