@@ -170,7 +170,8 @@ export async function getInboundRows() {
     product: transaction.product.name,
     supplier: transaction.product.supplier.name,
     quantity: transaction.quantity,
-    note: transaction.note ?? transaction.referenceNo ?? "-",
+    note: transaction.note ?? "-",
+    createdAt: transaction.createdAt.toLocaleString("sv-SE"),
   }));
 }
 

@@ -53,7 +53,6 @@ const inboundLineSchema = z.object({
 });
 
 const inboundBatchSchema = z.object({
-  referenceNo: z.string().trim().optional(),
   lines: z.array(inboundLineSchema).min(1),
 });
 
@@ -369,7 +368,6 @@ export async function createInboundBatchAction(
 
   try {
     parsed = inboundBatchSchema.parse({
-      referenceNo: String(formData.get("referenceNo") ?? ""),
       lines: rawLines,
     });
   } catch {
@@ -399,14 +397,12 @@ export async function createInboundBatchAction(
     await prisma.$transaction(async (tx) => {
       for (const line of parsed.lines) {
         const note = toOptionalValue(line.note);
-        const referenceNo = toOptionalValue(parsed.referenceNo);
 
         await tx.inventoryTransaction.create({
           data: {
             type: "MANUFACTURER_IN",
             productId: line.productId,
             quantity: line.quantity,
-            referenceNo,
             note,
             destinationLocationId: khoTong.id,
             createdById: user.id,
@@ -505,8 +501,9 @@ export async function submitBasketAction(
     await prisma.$transaction(async (tx) => {
       for (const line of parsed.lines) {
         const locationId = locationMap.get(line.warehouse);
+        const khoLeLocationId = locationMap.get(LocationCode.KHO_LE);
 
-        if (!locationId) {
+        if (!locationId || !khoLeLocationId) {
           throw new Error("missing-location");
         }
 
@@ -542,14 +539,36 @@ export async function submitBasketAction(
 
         await tx.inventoryTransaction.create({
           data: {
-            type: "CUSTOMER_OUT",
+            type: line.warehouse === LocationCode.KHO_TONG ? "TRANSFER" : "CUSTOMER_OUT",
             productId: line.productId,
             quantity: line.quantity,
             note: toOptionalValue(line.note),
             sourceLocationId: locationId,
+            ...(line.warehouse === LocationCode.KHO_TONG ? { destinationLocationId: khoLeLocationId } : {}),
             createdById: user.id,
           },
         });
+
+        if (line.warehouse === LocationCode.KHO_TONG) {
+          await tx.inventoryBalance.upsert({
+            where: {
+              productId_locationId: {
+                productId: line.productId,
+                locationId: khoLeLocationId,
+              },
+            },
+            update: {
+              quantity: {
+                increment: line.quantity,
+              },
+            },
+            create: {
+              productId: line.productId,
+              locationId: khoLeLocationId,
+              quantity: line.quantity,
+            },
+          });
+        }
       }
     });
   } catch (error) {

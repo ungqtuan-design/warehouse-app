@@ -15,8 +15,6 @@ type InboundProductOption = {
 };
 
 type InboundBatchText = {
-  referenceNumber: string;
-  manufacturerShipmentReference: string;
   product: string;
   supplier: string;
   quantity: string;
@@ -25,7 +23,6 @@ type InboundBatchText = {
   addRow: string;
   remove: string;
   productLookupPlaceholder: string;
-  supplierAutoFilled: string;
   selectProductFromList: string;
   submit: string;
   submitting: string;
@@ -61,7 +58,6 @@ export function InboundBatchEditor({
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
   const [rows, setRows] = useState<InboundDraftRow[]>([createRow()]);
-  const [referenceNo, setReferenceNo] = useState("");
   const [notice, setNotice] = useState<ActionNotice>(null);
   const [state, formAction, pending] = useActionState(createInboundBatchAction, idleFormActionState);
 
@@ -89,7 +85,6 @@ export function InboundBatchEditor({
     if (state.status === "success") {
       formRef.current?.reset();
       setRows([createRow()]);
-      setReferenceNo("");
       router.refresh();
       setNotice({ kind: "success", message: text.inboundSubmitSuccess });
       return;
@@ -115,17 +110,6 @@ export function InboundBatchEditor({
   return (
     <>
     <form ref={formRef} action={formAction} className="grid gap-4">
-      <label className="grid gap-2 text-sm font-medium text-slate-700">
-        {text.referenceNumber}
-        <input
-          name="referenceNo"
-          value={referenceNo}
-          onChange={(event) => setReferenceNo(event.target.value)}
-          className="rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-cyan-500"
-          placeholder={text.manufacturerShipmentReference}
-        />
-      </label>
-
       <input type="hidden" name="linesJson" value={serializedLines} />
 
       <div className="overflow-x-auto rounded-2xl border border-slate-200">
@@ -165,7 +149,6 @@ export function InboundBatchEditor({
                   <td className="px-4 py-3 align-top text-slate-600">
                     <div className="rounded-xl bg-slate-50 px-4 py-3">
                       <div className="font-medium text-slate-900">{matchedProduct?.supplierName ?? "-"}</div>
-                      <div className="mt-1 text-xs text-slate-500">{text.supplierAutoFilled}</div>
                     </div>
                   </td>
                   <td className="px-4 py-3 align-top">
