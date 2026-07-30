@@ -3,8 +3,9 @@
 import { useActionState, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
-import { createProductAction, idleFormActionState } from "@/app/actions/warehouse";
+import { createProductAction } from "@/app/actions/warehouse";
 import { ActionToast, primaryActionButtonClass, type ActionNotice } from "@/components/action-feedback";
+import { idleFormActionState } from "@/lib/action-state";
 
 type ProductCreateText = {
   product: string;

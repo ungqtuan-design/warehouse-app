@@ -4,8 +4,9 @@ import { useActionState, useEffect, useRef, useState } from "react";
 import { UserRole } from "@prisma/client";
 import { useRouter } from "next/navigation";
 
-import { createUserAction, idleFormActionState, resetUserPasswordAction } from "@/app/actions/warehouse";
+import { createUserAction, resetUserPasswordAction } from "@/app/actions/warehouse";
 import { ActionToast, primaryActionButtonClass, secondaryActionButtonClass, type ActionNotice } from "@/components/action-feedback";
+import { idleFormActionState } from "@/lib/action-state";
 
 type ManageUserText = {
   username: string;

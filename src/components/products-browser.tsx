@@ -30,6 +30,8 @@ type SupplierOption = {
 
 type ProductsBrowserText = {
   searchProductOrSku: string;
+  image: string;
+  noImage: string;
   allSuppliers: string;
   actions: string;
   includeInactive: string;
@@ -146,11 +148,12 @@ export function ProductsBrowser({
       </div>
 
       <div className="mt-5 overflow-x-auto rounded-2xl border border-slate-200">
-        <table className="min-w-[1180px] divide-y divide-slate-200 text-left text-sm lg:min-w-full">
+        <table className="min-w-[1260px] divide-y divide-slate-200 text-left text-sm lg:min-w-full">
           <thead className="bg-slate-50 text-slate-500">
             <tr>
               <th className="px-4 py-3 font-medium">SKU</th>
               <th className="px-4 py-3 font-medium">{text.actions}</th>
+              <th className="px-4 py-3 font-medium">{text.image}</th>
               <th className="px-4 py-3 font-medium">{text.product}</th>
               <th className="px-4 py-3 font-medium">{text.supplier}</th>
               <th className="px-4 py-3 font-medium">{text.status}</th>
@@ -165,13 +168,13 @@ export function ProductsBrowser({
           <tbody className="divide-y divide-slate-200 bg-white">
             {!hasSearched ? (
               <tr>
-                <td colSpan={11} className="px-4 py-10 text-center text-sm text-slate-500">
+                <td colSpan={12} className="px-4 py-10 text-center text-sm text-slate-500">
                   {products.length === 0 ? text.noProductsRows : text.searchPrompt}
                 </td>
               </tr>
             ) : results.length === 0 ? (
               <tr>
-                <td colSpan={11} className="px-4 py-10 text-center text-sm text-slate-500">
+                <td colSpan={12} className="px-4 py-10 text-center text-sm text-slate-500">
                   {text.noProductMatches}
                 </td>
               </tr>
@@ -291,18 +294,20 @@ function ProductTableRows({
           </button>
         </td>
         <td className="px-4 py-3">
-          <div className="flex items-center gap-3">
-            {product.imageUrl ? (
-              <img src={product.imageUrl} alt={product.name} className="h-12 w-12 rounded-xl border border-slate-200 object-cover" />
+          {product.imageUrl ? (
+            <img src={product.imageUrl} alt={product.name} className="h-12 w-12 rounded-xl border border-slate-200 object-cover" />
+          ) : (
+            <span className="text-xs text-slate-500">{text.noImage}</span>
+          )}
+        </td>
+        <td className="px-4 py-3">
+          <div>
+            <div className="font-medium text-slate-900">{product.name}</div>
+            {editMessage ? (
+              <p className={`mt-1 text-xs ${editMessage.kind === "success" ? "text-emerald-700" : "text-rose-700"}`}>
+                {editMessage.message}
+              </p>
             ) : null}
-            <div>
-              <div className="font-medium text-slate-900">{product.name}</div>
-              {editMessage ? (
-                <p className={`mt-1 text-xs ${editMessage.kind === "success" ? "text-emerald-700" : "text-rose-700"}`}>
-                  {editMessage.message}
-                </p>
-              ) : null}
-            </div>
           </div>
         </td>
         <td className="px-4 py-3 text-slate-600">{product.supplierName}</td>
@@ -382,7 +387,7 @@ function ProductEditInlineRow({
 
   return (
     <tr className="bg-slate-50">
-      <td colSpan={11} className="px-4 py-4">
+      <td colSpan={12} className="px-4 py-4">
         <form action={formAction} className="grid gap-4 lg:grid-cols-2">
           <input type="hidden" name="productId" value={product.id} />
           <label className="grid gap-2 text-sm font-medium text-slate-700">

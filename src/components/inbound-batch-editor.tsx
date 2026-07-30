@@ -3,8 +3,9 @@
 import { useActionState, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
-import { createInboundBatchAction, idleFormActionState } from "@/app/actions/warehouse";
+import { createInboundBatchAction } from "@/app/actions/warehouse";
 import { ActionToast, primaryActionButtonClass, secondaryActionButtonClass, type ActionNotice } from "@/components/action-feedback";
+import { idleFormActionState } from "@/lib/action-state";
 
 type InboundProductOption = {
   id: string;

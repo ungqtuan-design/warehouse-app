@@ -5,6 +5,7 @@ import { UserRole } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
+import type { FormActionState } from "@/lib/action-state";
 import { resizeUploadedImage } from "@/lib/image";
 import { requireAdmin, requireUser } from "@/lib/auth";
 import { hashPassword } from "@/lib/password";
@@ -70,16 +71,6 @@ const outboundBatchSchema = z.object({
 type ProductUpdateInlineState = {
   status: "idle" | "success" | "error";
   message: string;
-};
-
-export type FormActionState = {
-  status: "idle" | "success" | "error";
-  message: string;
-};
-
-export const idleFormActionState: FormActionState = {
-  status: "idle",
-  message: "",
 };
 
 type BasketSubmitState = FormActionState;
