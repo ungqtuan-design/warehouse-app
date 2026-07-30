@@ -61,12 +61,10 @@ const outboundLineSchema = z.object({
   productId: z.string().trim().min(1),
   quantity: z.coerce.number().int().min(1),
   warehouse: z.enum([LocationCode.KHO_TONG, LocationCode.KHO_LE]),
+  note: z.string().trim().optional(),
 });
 
 const outboundBatchSchema = z.object({
-  customerName: z.string().trim().min(1),
-  referenceNo: z.string().trim().optional(),
-  note: z.string().trim().optional(),
   lines: z.array(outboundLineSchema).min(1),
 });
 
@@ -386,15 +384,12 @@ export async function submitBasketAction(
 
   try {
     parsed = outboundBatchSchema.parse({
-      customerName: String(formData.get("customerName") ?? ""),
-      referenceNo: String(formData.get("referenceNo") ?? ""),
-      note: String(formData.get("note") ?? ""),
       lines: rawLines,
     });
   } catch {
     return {
       status: "error",
-      message: "Please complete customer and basket information.",
+      message: "Please complete basket information.",
     };
   }
 
@@ -463,9 +458,7 @@ export async function submitBasketAction(
             type: "CUSTOMER_OUT",
             productId: line.productId,
             quantity: line.quantity,
-            customerName: parsed.customerName,
-            referenceNo: toOptionalValue(parsed.referenceNo),
-            note: toOptionalValue(parsed.note),
+            note: toOptionalValue(line.note),
             sourceLocationId: locationId,
             createdById: user.id,
           },

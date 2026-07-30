@@ -96,10 +96,12 @@ CREATE INDEX IF NOT EXISTS "Product_status_idx" ON "Product"("status");
 ALTER TABLE "InventoryTransaction"
   ADD COLUMN IF NOT EXISTS "referenceNo" TEXT,
   ADD COLUMN IF NOT EXISTS "note" TEXT,
-  ADD COLUMN IF NOT EXISTS "customerName" TEXT,
   ADD COLUMN IF NOT EXISTS "sourceLocationId" TEXT,
   ADD COLUMN IF NOT EXISTS "destinationLocationId" TEXT,
   ADD COLUMN IF NOT EXISTS "createdById" TEXT;
+
+ALTER TABLE "InventoryTransaction"
+  DROP COLUMN IF EXISTS "customerName";
 
 INSERT INTO "User" ("id", "username", "passwordHash", "role", "createdAt", "updatedAt")
 VALUES (

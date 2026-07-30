@@ -211,9 +211,9 @@ export async function getBasketRows() {
     sku: transaction.product.sku,
     product: transaction.product.name,
     source: transaction.sourceLocation?.name ?? "Kho Lẻ",
-    available: 0,
     quantity: transaction.quantity,
-    customer: transaction.customerName ?? "-",
+    note: transaction.note ?? "-",
+    createdAt: transaction.createdAt.toLocaleString("sv-SE"),
   }));
 }
 
@@ -269,7 +269,6 @@ export async function getOrderExportRows() {
     source_location: transaction.sourceLocation?.name ?? "",
     destination_location: transaction.destinationLocation?.name ?? "",
     reference_no: transaction.referenceNo ?? "",
-    customer_name: transaction.customerName ?? "",
     note: transaction.note ?? "",
   }));
 }

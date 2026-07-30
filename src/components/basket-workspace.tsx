@@ -8,8 +8,9 @@ import { useBasket } from "@/components/basket-provider";
 
 type BasketWorkspaceText = {
   basket: string;
-  issueFromKhoLe: string;
+  outboundBasket: string;
   currentBasket: string;
+  outboundHistory: string;
   basketEmpty: string;
   supplier: string;
   source: string;
@@ -17,21 +18,36 @@ type BasketWorkspaceText = {
   remove: string;
   clearBasket: string;
   totalBasketItems: string;
-  customerName: string;
-  customerOrLineName: string;
-  deliveryOrIssueReference: string;
   note: string;
   confirmIssue: string;
   basketSubmitSuccess: string;
   basketSubmitError: string;
   basketStockError: string;
+  noBasketRows: string;
+  created: string;
+  product: string;
+  actions: string;
 };
 
-export function BasketWorkspace({ text }: { text: BasketWorkspaceText }) {
+type BasketHistoryRow = {
+  id: string;
+  sku: string;
+  product: string;
+  source: string;
+  quantity: number;
+  note: string;
+  createdAt: string;
+};
+
+export function BasketWorkspace({
+  text,
+  historyRows,
+}: {
+  text: BasketWorkspaceText;
+  historyRows: BasketHistoryRow[];
+}) {
   const { items, totalCount, removeItem, clearBasket } = useBasket();
-  const [customerName, setCustomerName] = useState("");
-  const [referenceNo, setReferenceNo] = useState("");
-  const [note, setNote] = useState("");
+  const [lineNotes, setLineNotes] = useState<Record<string, string>>({});
   const [state, formAction, pending] = useActionState(submitBasketAction, {
     status: "idle" as const,
     message: "",
@@ -41,14 +57,13 @@ export function BasketWorkspace({ text }: { text: BasketWorkspaceText }) {
     productId: item.productId,
     quantity: item.quantity,
     warehouse: item.warehouse,
-  }))), [items]);
+    note: lineNotes[item.key]?.trim() ?? "",
+  }))), [items, lineNotes]);
 
   useEffect(() => {
     if (state.status === "success") {
       clearBasket();
-      setCustomerName("");
-      setReferenceNo("");
-      setNote("");
+      setLineNotes({});
     }
   }, [clearBasket, state.status]);
 
@@ -62,7 +77,7 @@ export function BasketWorkspace({ text }: { text: BasketWorkspaceText }) {
     <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="text-sm font-medium text-slate-500">{text.basket}</p>
+          <p className="text-sm font-medium text-slate-500">{text.outboundBasket}</p>
           <h2 className="mt-1 text-xl font-semibold text-slate-950">{text.currentBasket}</h2>
         </div>
         <div className="rounded-2xl bg-cyan-50 px-4 py-3 text-sm font-semibold text-cyan-900">
@@ -76,52 +91,51 @@ export function BasketWorkspace({ text }: { text: BasketWorkspaceText }) {
         </p>
       ) : (
         <form action={formAction} className="mt-5 grid gap-4">
-          <div className="grid gap-4">
-            <label className="grid gap-2 text-sm font-medium text-slate-700">
-              {text.customerName}
-              <input value={customerName} onChange={(event) => setCustomerName(event.target.value)} name="customerName" className="rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-cyan-500" placeholder={text.customerOrLineName} required />
-            </label>
-            <label className="grid gap-2 text-sm font-medium text-slate-700">
-              {text.deliveryOrIssueReference}
-              <input value={referenceNo} onChange={(event) => setReferenceNo(event.target.value)} name="referenceNo" className="rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-cyan-500" />
-            </label>
-            <label className="grid gap-2 text-sm font-medium text-slate-700">
-              {text.note}
-              <input value={note} onChange={(event) => setNote(event.target.value)} name="note" className="rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-cyan-500" />
-            </label>
+          <div className="overflow-x-auto rounded-2xl border border-slate-200">
+            <table className="min-w-[920px] divide-y divide-slate-200 text-left text-sm lg:min-w-full">
+              <thead className="bg-slate-50 text-slate-500">
+                <tr>
+                  <th className="px-4 py-3 font-medium">SKU</th>
+                  <th className="px-4 py-3 font-medium">{text.product}</th>
+                  <th className="px-4 py-3 font-medium">{text.supplier}</th>
+                  <th className="px-4 py-3 font-medium">{text.source}</th>
+                  <th className="px-4 py-3 font-medium">{text.quantity}</th>
+                  <th className="px-4 py-3 font-medium">{text.note}</th>
+                  <th className="px-4 py-3 font-medium">{text.actions}</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-200 bg-white">
+                {items.map((item) => (
+                  <tr key={item.key}>
+                    <td className="px-4 py-3 font-medium text-slate-900">{item.sku}</td>
+                    <td className="px-4 py-3 text-slate-700">{item.name}</td>
+                    <td className="px-4 py-3 text-slate-600">{item.supplierName}</td>
+                    <td className="px-4 py-3 text-slate-600">{item.warehouseName}</td>
+                    <td className="px-4 py-3 text-slate-700">{item.quantity}</td>
+                    <td className="px-4 py-3">
+                      <input
+                        value={lineNotes[item.key] ?? ""}
+                        onChange={(event) => setLineNotes((current) => ({
+                          ...current,
+                          [item.key]: event.target.value,
+                        }))}
+                        className="w-full min-w-48 rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-cyan-500"
+                        placeholder={text.note}
+                      />
+                    </td>
+                    <td className="px-4 py-3">
+                      <button type="button" onClick={() => removeItem(item.key)} className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-rose-200 bg-rose-50 text-rose-700 transition hover:bg-rose-100" aria-label={text.remove} title={text.remove}>
+                        <Ban className="h-4 w-4" />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
 
           <input type="hidden" name="linesJson" value={serializedLines} />
 
-          <div className="grid gap-3">
-          {items.map((item) => (
-            <article key={item.key} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="font-semibold text-slate-950">{item.name}</p>
-                  <p className="text-sm text-slate-500">{item.sku}</p>
-                </div>
-                <button type="button" onClick={() => removeItem(item.key)} className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-rose-200 bg-rose-50 text-rose-700 transition hover:bg-rose-100" aria-label={text.remove} title={text.remove}>
-                  <Ban className="h-4 w-4" />
-                </button>
-              </div>
-              <div className="mt-4 grid gap-3 sm:grid-cols-3 text-sm">
-                <div className="rounded-xl bg-white px-4 py-3">
-                  <p className="text-xs font-medium uppercase tracking-[0.2em] text-slate-400">{text.supplier}</p>
-                  <p className="mt-2 font-medium text-slate-800">{item.supplierName}</p>
-                </div>
-                <div className="rounded-xl bg-white px-4 py-3">
-                  <p className="text-xs font-medium uppercase tracking-[0.2em] text-slate-400">{text.source}</p>
-                  <p className="mt-2 font-medium text-slate-800">{item.warehouseName}</p>
-                </div>
-                <div className="rounded-xl bg-white px-4 py-3">
-                  <p className="text-xs font-medium uppercase tracking-[0.2em] text-slate-400">{text.quantity}</p>
-                  <p className="mt-2 font-medium text-slate-800">{item.quantity}</p>
-                </div>
-              </div>
-            </article>
-          ))}
-          </div>
           {submitMessage ? <p className={`text-sm ${state.status === "success" ? "text-emerald-700" : "text-rose-700"}`}>{submitMessage}</p> : null}
           <div className="flex flex-col gap-3 sm:flex-row">
             <button type="button" onClick={clearBasket} className="rounded-xl border border-slate-300 px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
@@ -133,6 +147,45 @@ export function BasketWorkspace({ text }: { text: BasketWorkspaceText }) {
           </div>
         </form>
       )}
+
+      <div className="mt-8">
+        <div>
+          <p className="text-sm font-medium text-slate-500">{text.outboundBasket}</p>
+          <h3 className="mt-1 text-lg font-semibold text-slate-950">{text.outboundHistory}</h3>
+        </div>
+        <div className="mt-4 overflow-x-auto rounded-2xl border border-slate-200">
+          <table className="min-w-[760px] divide-y divide-slate-200 text-left text-sm lg:min-w-full">
+            <thead className="bg-slate-50 text-slate-500">
+              <tr>
+                <th className="px-4 py-3 font-medium">SKU</th>
+                <th className="px-4 py-3 font-medium">{text.product}</th>
+                <th className="px-4 py-3 font-medium">{text.source}</th>
+                <th className="px-4 py-3 font-medium">{text.quantity}</th>
+                <th className="px-4 py-3 font-medium">{text.note}</th>
+                <th className="px-4 py-3 font-medium">{text.created}</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-200 bg-white">
+              {historyRows.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="px-4 py-10 text-center text-sm text-slate-500">
+                    {text.noBasketRows}
+                  </td>
+                </tr>
+              ) : historyRows.map((line) => (
+                <tr key={line.id}>
+                  <td className="px-4 py-3 font-medium text-slate-900">{line.sku}</td>
+                  <td className="px-4 py-3 text-slate-700">{line.product}</td>
+                  <td className="px-4 py-3 text-slate-600">{line.source}</td>
+                  <td className="px-4 py-3 text-slate-700">{line.quantity}</td>
+                  <td className="px-4 py-3 text-slate-600">{line.note}</td>
+                  <td className="px-4 py-3 text-slate-600">{line.createdAt}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </section>
   );
 }

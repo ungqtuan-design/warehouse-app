@@ -106,7 +106,6 @@ model InventoryTransaction {
   quantity              Int
   referenceNo           String?
   note                  String?
-  customerName          String?
   sourceLocationId      String?
   destinationLocationId String?
   createdById           String?

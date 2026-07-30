@@ -185,7 +185,7 @@ export function InboundBatchEditor({
         <button
           type="submit"
           disabled={rows.length === 0 || hasInvalidRow}
-          className="rounded-xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
+          className="rounded-xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-600 disabled:text-slate-100"
         >
           {text.submitInboundBatch}
         </button>
