@@ -1,6 +1,6 @@
 import { UserRole } from "@prisma/client";
 
-import { createUserAction } from "@/app/actions/warehouse";
+import { createUserAction, resetUserPasswordAction } from "@/app/actions/warehouse";
 import { getRoleLabel, requireAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getUiContext } from "@/lib/ui";
@@ -56,6 +56,23 @@ export default async function ManageUsersPage() {
                   <dd>{user.createdAt.toLocaleDateString()}</dd>
                 </div>
               </dl>
+              <form action={resetUserPasswordAction} className="mt-4 grid gap-3 border-t border-slate-200 pt-4">
+                <input type="hidden" name="userId" value={user.id} />
+                <label className="grid gap-2 text-sm font-medium text-slate-700">
+                  {text.resetPassword}
+                  <input
+                    name="password"
+                    type="password"
+                    minLength={3}
+                    className="rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-cyan-500"
+                    placeholder={text.newPasswordPlaceholder}
+                    required
+                  />
+                </label>
+                <button type="submit" className="rounded-xl border border-slate-300 px-4 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:bg-white">
+                  {text.resetPasswordButton}
+                </button>
+              </form>
             </article>
           ))}
         </div>

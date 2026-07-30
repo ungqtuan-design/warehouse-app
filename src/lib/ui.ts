@@ -102,6 +102,9 @@ const dictionaries = {
     role: "Role",
     saveUser: "Save user",
     created: "Created",
+    resetPassword: "Reset password",
+    resetPasswordButton: "Set new password",
+    newPasswordPlaceholder: "Enter a temporary password",
   },
   vi: {
     appTitle: "Điều phối kho",
@@ -196,6 +199,9 @@ const dictionaries = {
     role: "Vai trò",
     saveUser: "Lưu người dùng",
     created: "Ngày tạo",
+    resetPassword: "Đặt lại mật khẩu",
+    resetPasswordButton: "Thiết lập mật khẩu mới",
+    newPasswordPlaceholder: "Nhập mật khẩu tạm thời",
   },
 } as const;
 

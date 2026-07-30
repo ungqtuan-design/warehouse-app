@@ -35,6 +35,11 @@ const userSchema = z.object({
   role: z.nativeEnum(UserRole),
 });
 
+const resetPasswordSchema = z.object({
+  userId: z.string().trim().min(1),
+  password: z.string().min(3),
+});
+
 function toOptionalValue(value: string | undefined) {
   if (!value) {
     return null;
@@ -134,4 +139,28 @@ export async function createUserAction(formData: FormData) {
 
   revalidatePath("/manage-users");
   redirect("/manage-users");
+}
+
+export async function resetUserPasswordAction(formData: FormData) {
+  await requireAdmin();
+
+  const parsed = resetPasswordSchema.parse({
+    userId: String(formData.get("userId") ?? ""),
+    password: String(formData.get("password") ?? ""),
+  });
+
+  await prisma.user.update({
+    where: {
+      id: parsed.userId,
+    },
+    data: {
+      passwordHash: hashPassword(parsed.password),
+      sessions: {
+        deleteMany: {},
+      },
+    },
+  });
+
+  revalidatePath("/manage-users");
+  redirect("/manage-users?passwordReset=1");
 }
