@@ -1,12 +1,7 @@
 import "server-only";
 
 import { cookies } from "next/headers";
-
-export type UiTheme = "light" | "dark";
-export type UiLanguage = "en" | "vi";
-
-const THEME_COOKIE = "wiings_theme";
-const LANGUAGE_COOKIE = "wiings_lang";
+import { uiCookieNames, type UiLanguage, type UiTheme } from "@/lib/ui-preferences";
 
 const dictionaries = {
   en: {
@@ -211,8 +206,8 @@ const dictionaries = {
 
 export async function getUiPreferences() {
   const cookieStore = await cookies();
-  const theme = cookieStore.get(THEME_COOKIE)?.value === "dark" ? "dark" : "light";
-  const language = cookieStore.get(LANGUAGE_COOKIE)?.value === "vi" ? "vi" : "en";
+  const theme = cookieStore.get(uiCookieNames.theme)?.value === "dark" ? "dark" : "light";
+  const language = cookieStore.get(uiCookieNames.language)?.value === "vi" ? "vi" : "en";
 
   return {
     theme,
@@ -229,7 +224,3 @@ export async function getUiContext() {
   };
 }
 
-export const uiCookieNames = {
-  theme: THEME_COOKIE,
-  language: LANGUAGE_COOKIE,
-};

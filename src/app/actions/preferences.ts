@@ -3,7 +3,7 @@
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 
-import { uiCookieNames, type UiLanguage, type UiTheme } from "@/lib/ui";
+import { uiCookieNames, type UiLanguage, type UiTheme } from "@/lib/ui-preferences";
 
 function getReturnPath(value: string | null) {
   if (!value) {

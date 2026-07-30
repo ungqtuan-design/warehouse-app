@@ -3,7 +3,7 @@
 import { startTransition, useState } from "react";
 import { useRouter } from "next/navigation";
 
-import { uiCookieNames, type UiLanguage, type UiTheme } from "@/lib/ui";
+import { uiCookieNames, type UiLanguage, type UiTheme } from "@/lib/ui-preferences";
 
 type PreferenceTogglesProps = {
   theme: UiTheme;
