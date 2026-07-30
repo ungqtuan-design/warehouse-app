@@ -28,20 +28,15 @@ export default async function Home() {
     { label: text.customerOrders30d, value: metrics.customerOrders30d, note: text.khoLe },
   ];
 
-  const flows = [text.flow1, text.flow2, text.flow3];
-
   return (
     <div className="grid gap-6">
       <section className="rounded-3xl bg-slate-950 px-6 py-8 text-white shadow-xl">
         <p className="text-sm uppercase tracking-[0.3em] text-cyan-300">{text.dashboard}</p>
-        <div className="mt-4 grid gap-6 lg:grid-cols-[2fr_1fr]">
+        <div className="mt-4">
           <div>
             <h1 className="max-w-2xl text-3xl font-semibold tracking-tight sm:text-4xl">
               {text.dashboardTitle}
             </h1>
-            <p className="mt-4 max-w-2xl text-sm leading-7 text-slate-300 sm:text-base">
-              {text.dashboardBody}
-            </p>
             <div className="mt-5 flex flex-wrap gap-3">
               <Link href="/api/export/stock" className="rounded-full bg-white/10 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/20">
                 {text.exportStock}
@@ -56,16 +51,6 @@ export default async function Home() {
                 {text.exportInventory}
               </Link>
             </div>
-          </div>
-          <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-5">
-            <p className="text-sm font-semibold text-slate-200">{text.allowedStockFlow}</p>
-            <ul className="mt-4 space-y-3 text-sm text-slate-300">
-              {flows.map((flow) => (
-                <li key={flow} className="rounded-xl border border-slate-800 bg-slate-950 px-4 py-3">
-                  {flow}
-                </li>
-              ))}
-            </ul>
           </div>
         </div>
       </section>

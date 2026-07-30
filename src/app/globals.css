@@ -21,6 +21,7 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  transition: background-color 0.18s ease, color 0.18s ease;
 }
 
 * {
@@ -34,6 +35,11 @@ a {
 
 .theme-dark .bg-white {
   background-color: #0f172a;
+}
+
+.theme-dark .theme-toggle-shell {
+  background-color: rgba(15, 23, 42, 0.88);
+  border-color: #334155;
 }
 
 .theme-dark .bg-slate-50,
@@ -67,6 +73,30 @@ a {
   box-shadow: none;
 }
 
+.app-shell {
+  background:
+    radial-gradient(circle at top right, rgba(6, 182, 212, 0.12), transparent 26%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.3), transparent 28%),
+    var(--background);
+}
+
+.app-main {
+  background: transparent;
+}
+
+.theme-dark .app-shell {
+  background:
+    radial-gradient(circle at top right, rgba(34, 211, 238, 0.12), transparent 28%),
+    radial-gradient(circle at bottom left, rgba(14, 165, 233, 0.08), transparent 24%),
+    linear-gradient(180deg, rgba(15, 23, 42, 0.45), transparent 24%),
+    var(--background);
+}
+
+.theme-dark .app-header {
+  background-color: rgba(2, 6, 23, 0.82);
+  backdrop-filter: blur(14px);
+}
+
 .theme-dark input,
 .theme-dark select,
 .theme-dark textarea {
@@ -88,6 +118,14 @@ a {
 
 .theme-dark .bg-rose-50 {
   background-color: rgba(225, 29, 72, 0.16);
+}
+
+.theme-dark .hover\:bg-slate-50:hover {
+  background-color: rgba(30, 41, 59, 0.9);
+}
+
+.theme-dark .hover\:bg-slate-100:hover {
+  background-color: rgba(30, 41, 59, 0.9);
 }
 
 summary {

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Boxes, ClipboardList, LayoutGrid, LogOut, Package, ShieldUser, ShoppingBasket, Truck } from "lucide-react";
 
 import { logoutAction } from "@/app/actions/auth";
-import { setLanguageAction, setThemeAction } from "@/app/actions/preferences";
+import { PreferenceToggles } from "@/components/preference-toggles";
 import { getCurrentUser } from "@/lib/auth";
 import { getUiContext } from "@/lib/ui";
 
@@ -33,7 +33,7 @@ export default async function RootLayout({
   if (!user) {
     return (
       <html lang={language} className="h-full">
-        <body className={`theme-${theme} min-h-full bg-slate-950 text-slate-50`}>
+        <body className={`theme-${theme} min-h-full text-slate-50`}>
           <main className="flex min-h-screen items-center justify-center px-4 py-10 sm:px-6">{children}</main>
         </body>
       </html>
@@ -55,8 +55,8 @@ export default async function RootLayout({
 
   return (
     <html lang={language} className="h-full">
-      <body className={`theme-${theme} min-h-full bg-slate-100 text-slate-900`}>
-        <div className="min-h-screen lg:grid lg:grid-cols-[18rem_1fr]">
+      <body className={`theme-${theme} min-h-full text-slate-900`}>
+        <div className="app-shell min-h-screen lg:grid lg:grid-cols-[18rem_1fr]">
           <aside className="border-b border-slate-200 bg-slate-950 text-slate-50 lg:min-h-screen lg:border-b-0 lg:border-r">
             <div className="border-b border-slate-800 px-4 py-5 sm:px-6 sm:py-6">
               <p className="text-xs uppercase tracking-[0.3em] text-cyan-300">Wiings</p>
@@ -77,44 +77,35 @@ export default async function RootLayout({
             </nav>
           </aside>
           <div className="flex min-h-screen min-w-0 flex-col">
-            <header className="border-b border-slate-200 bg-white px-4 py-4 shadow-sm sm:px-6">
+            <header className="app-header border-b border-slate-200 bg-white px-4 py-4 shadow-sm sm:px-6">
               <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                 <div>
                   <p className="text-sm font-medium text-slate-500">Wiings</p>
                   <h2 className="text-xl font-semibold">{text.workspaceLabel}</h2>
                 </div>
                 <div className="flex flex-wrap items-center gap-3">
-                  <div className="rounded-full bg-slate-100 px-4 py-2 text-sm font-medium text-slate-700">
-                    {text.signedInAs} {user.username}
-                  </div>
                   <div className="rounded-full bg-cyan-50 px-4 py-2 text-sm font-medium text-cyan-900">
                     {user.role === "ADMIN" ? text.admin : text.operation}
                   </div>
                   <div className="rounded-full bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-800">
                     {text.locationsLabel}: {text.khoTong}, {text.khoLe}
                   </div>
-                  <form action={setThemeAction} className="flex overflow-hidden rounded-full border border-slate-300">
-                    <input type="hidden" name="theme" value={theme === "dark" ? "light" : "dark"} />
-                    <button type="submit" className="px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50">
-                      {theme === "dark" ? text.lightMode : text.darkMode}
-                    </button>
-                  </form>
-                  <form action={setLanguageAction} className="flex overflow-hidden rounded-full border border-slate-300">
-                    <input type="hidden" name="language" value={language === "en" ? "vi" : "en"} />
-                    <button type="submit" className="px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50">
-                      {language === "en" ? text.vietnamese : text.english}
-                    </button>
-                  </form>
-                  <form action={logoutAction}>
-                    <button type="submit" className="inline-flex items-center gap-2 rounded-full border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50">
-                      <LogOut className="h-4 w-4" />
-                      {text.signOut}
-                    </button>
-                  </form>
+                  <PreferenceToggles theme={theme} language={language} text={text} />
+                  <div className="flex flex-col items-start gap-2 sm:items-end">
+                    <p className="text-sm font-medium text-slate-600">
+                      {text.greeting} {user.name || user.username}
+                    </p>
+                    <form action={logoutAction}>
+                      <button type="submit" className="inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white/80 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50">
+                        <LogOut className="h-4 w-4" />
+                        {text.signOut}
+                      </button>
+                    </form>
+                  </div>
                 </div>
               </div>
             </header>
-            <main className="flex-1 px-4 py-6 sm:px-6">{children}</main>
+            <main className="app-main flex-1 px-4 py-6 sm:px-6">{children}</main>
           </div>
         </div>
       </body>

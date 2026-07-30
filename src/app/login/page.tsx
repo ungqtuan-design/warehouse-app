@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 
 import { loginAction } from "@/app/actions/auth";
+import { LoginSubmitButton } from "@/components/login-submit-button";
 import { getCurrentUser } from "@/lib/auth";
 import { getUiContext } from "@/lib/ui";
 
@@ -23,9 +24,8 @@ export default async function LoginPage() {
           {text.username}
           <input
             name="username"
-            defaultValue="admin"
             className="rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none transition focus:border-cyan-500"
-            placeholder="admin"
+            placeholder={text.username}
             autoComplete="username"
             required
           />
@@ -35,20 +35,14 @@ export default async function LoginPage() {
           <input
             name="password"
             type="password"
-            defaultValue="admin"
             className="rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none transition focus:border-cyan-500"
             placeholder={text.password}
             autoComplete="current-password"
             required
           />
         </label>
-        <button type="submit" className="mt-2 rounded-xl bg-cyan-500 px-4 py-3 text-sm font-semibold text-slate-950 transition hover:bg-cyan-400">
-          {text.signIn}
-        </button>
+        <LoginSubmitButton label={text.signIn} pendingLabel={text.signingIn} />
       </form>
-      <div className="mt-6 rounded-2xl border border-slate-800 bg-slate-950/80 px-4 py-4 text-sm text-slate-300">
-        {text.defaultAdmin}: <span className="font-semibold text-white">admin / admin</span>
-      </div>
     </div>
   );
 }
