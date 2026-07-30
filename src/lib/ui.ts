@@ -1,13 +1,12 @@
 import "server-only";
 
 import { cookies } from "next/headers";
-import { uiCookieNames, type UiLanguage, type UiTheme } from "@/lib/ui-preferences";
+import { legacyUiCookieNames, uiCookieNames, type UiLanguage, type UiTheme } from "@/lib/ui-preferences";
 
 const dictionaries = {
   en: {
-    appTitle: "Warehouse Control",
-    appDescription: "Neon-backed stock flow for Kho Tổng and Kho Lẻ.",
-    workspaceLabel: "Warehouse workspace",
+    appTitle: "Mood Inventory Management System",
+    appDescription: "MIMS stock flow for Kho Tổng and Kho Lẻ.",
     locationsLabel: "Locations",
     greeting: "Hi",
     signOut: "Sign out",
@@ -171,9 +170,8 @@ const dictionaries = {
     basketStockError: "One or more basket items exceed available stock.",
   },
   vi: {
-    appTitle: "Điều phối kho",
-    appDescription: "Luồng tồn kho dùng Neon cho Kho Tổng và Kho Lẻ.",
-    workspaceLabel: "Không gian vận hành kho",
+    appTitle: "Mood Inventory Management System",
+    appDescription: "MIMS quản lý luồng tồn kho cho Kho Tổng và Kho Lẻ.",
     locationsLabel: "Kho",
     greeting: "Chào",
     signOut: "Đăng xuất",
@@ -340,13 +338,15 @@ const dictionaries = {
 
 export async function getUiPreferences() {
   const cookieStore = await cookies();
-  const theme = cookieStore.get(uiCookieNames.theme)?.value === "dark" ? "dark" : "light";
-  const language = cookieStore.get(uiCookieNames.language)?.value === "vi" ? "vi" : "en";
+  const themeCookie = cookieStore.get(uiCookieNames.theme)?.value ?? cookieStore.get(legacyUiCookieNames.theme)?.value;
+  const languageCookie = cookieStore.get(uiCookieNames.language)?.value ?? cookieStore.get(legacyUiCookieNames.language)?.value;
+  const theme: UiTheme = themeCookie === "dark" ? "dark" : "light";
+  const language: UiLanguage = languageCookie === "vi" ? "vi" : "en";
 
-  return {
+    return {
     theme,
     language,
-  } satisfies { theme: UiTheme; language: UiLanguage };
+    };
 }
 
 export async function getUiContext() {

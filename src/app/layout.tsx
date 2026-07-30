@@ -12,8 +12,8 @@ import { getCurrentUser } from "@/lib/auth";
 import { getUiContext } from "@/lib/ui";
 
 export const metadata: Metadata = {
-  title: "Warehouse App",
-  description: "Warehouse management system for kho tong and kho le",
+  title: "MIMS",
+  description: "Mood Inventory Management System for Kho Tong and Kho Le",
 };
 
 const baseNavigation = [
@@ -63,7 +63,7 @@ export default async function RootLayout({
           <div className="app-shell min-h-screen lg:grid lg:grid-cols-[18rem_1fr]">
           <aside className="border-b border-slate-200 bg-slate-950 text-slate-50 lg:min-h-screen lg:border-b-0 lg:border-r">
             <div className="border-b border-slate-800 px-4 py-5 sm:px-6 sm:py-6">
-              <p className="text-xs uppercase tracking-[0.3em] text-cyan-300">Wiings</p>
+              <p className="text-xs uppercase tracking-[0.3em] text-cyan-300">MIMS</p>
               <h1 className="mt-2 text-2xl font-semibold">{text.appTitle}</h1>
             </div>
             <nav className="flex gap-2 overflow-x-auto px-3 py-4 lg:grid lg:gap-1 lg:overflow-visible">
@@ -86,8 +86,7 @@ export default async function RootLayout({
             <header className="app-header border-b border-slate-200 bg-white px-4 py-4 shadow-sm sm:px-6">
               <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                 <div>
-                  <p className="text-sm font-medium text-slate-500">Wiings</p>
-                  <h2 className="text-xl font-semibold">{text.workspaceLabel}</h2>
+                  <p className="text-sm font-medium text-slate-500">MIMS</p>
                 </div>
                 <div className="flex flex-wrap items-center gap-3">
                   <div className="rounded-full bg-cyan-50 px-4 py-2 text-sm font-medium text-cyan-900">

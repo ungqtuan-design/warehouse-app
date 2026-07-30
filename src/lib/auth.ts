@@ -8,7 +8,8 @@ import { cache } from "react";
 
 import { prisma } from "@/lib/prisma";
 
-const SESSION_COOKIE_NAME = "wiings_session";
+const SESSION_COOKIE_NAME = "mims_session";
+const LEGACY_SESSION_COOKIE_NAME = "wiings_session";
 const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
 function hashToken(token: string) {
@@ -17,7 +18,7 @@ function hashToken(token: string) {
 
 export const getCurrentSession = cache(async () => {
   const cookieStore = await cookies();
-  const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
+  const token = cookieStore.get(SESSION_COOKIE_NAME)?.value ?? cookieStore.get(LEGACY_SESSION_COOKIE_NAME)?.value;
 
   if (!token) {
     return null;
@@ -40,6 +41,7 @@ export const getCurrentSession = cache(async () => {
 
   if (!session) {
     cookieStore.delete(SESSION_COOKIE_NAME);
+    cookieStore.delete(LEGACY_SESSION_COOKIE_NAME);
     return null;
   }
 
@@ -51,6 +53,7 @@ export const getCurrentSession = cache(async () => {
     });
 
     cookieStore.delete(SESSION_COOKIE_NAME);
+    cookieStore.delete(LEGACY_SESSION_COOKIE_NAME);
     return null;
   }
 
@@ -105,7 +108,7 @@ export async function createSession(userId: string) {
 
 export async function clearSession() {
   const cookieStore = await cookies();
-  const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
+  const token = cookieStore.get(SESSION_COOKIE_NAME)?.value ?? cookieStore.get(LEGACY_SESSION_COOKIE_NAME)?.value;
 
   if (token) {
     await prisma.userSession.deleteMany({
@@ -116,6 +119,7 @@ export async function clearSession() {
   }
 
   cookieStore.delete(SESSION_COOKIE_NAME);
+  cookieStore.delete(LEGACY_SESSION_COOKIE_NAME);
 }
 
 export function getRoleLabel(role: UserRole) {

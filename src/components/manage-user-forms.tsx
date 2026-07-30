@@ -55,11 +55,11 @@ export function CreateUserForm({ text }: { text: ManageUserText }) {
       <form ref={formRef} action={formAction} className="mt-5 grid gap-4">
         <label className="grid gap-2 text-sm font-medium text-slate-700">
           {text.username}
-          <input name="username" className="rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-cyan-500" placeholder={text.loginIdPlaceholder} required />
+          <input name="username" minLength={3} autoComplete="username" className="rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-cyan-500" placeholder={text.loginIdPlaceholder} required />
         </label>
         <label className="grid gap-2 text-sm font-medium text-slate-700">
           {text.password}
-          <input name="password" type="password" className="rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-cyan-500" placeholder={text.temporaryPasswordPlaceholder} required />
+          <input name="password" type="password" minLength={3} autoComplete="new-password" className="rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-cyan-500" placeholder={text.temporaryPasswordPlaceholder} required />
         </label>
         <label className="grid gap-2 text-sm font-medium text-slate-700">
           {text.role}

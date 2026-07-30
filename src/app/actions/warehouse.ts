@@ -250,11 +250,20 @@ export async function createUserAction(
 ): Promise<FormActionState> {
   await requireAdmin();
 
-  const parsed = userSchema.parse({
-    username: String(formData.get("username") ?? "").toLowerCase(),
-    password: String(formData.get("password") ?? ""),
-    role: formData.get("role") === UserRole.ADMIN ? UserRole.ADMIN : UserRole.OPERATION,
-  });
+  let parsed: z.infer<typeof userSchema>;
+
+  try {
+    parsed = userSchema.parse({
+      username: String(formData.get("username") ?? "").toLowerCase(),
+      password: String(formData.get("password") ?? ""),
+      role: formData.get("role") === UserRole.ADMIN ? UserRole.ADMIN : UserRole.OPERATION,
+    });
+  } catch {
+    return {
+      status: "error",
+      message: "user-create-failed",
+    };
+  }
 
   const existingUser = await prisma.user.findUnique({
     where: {

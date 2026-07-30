@@ -26,7 +26,8 @@ type BasketContextValue = {
   clearBasket: () => void;
 };
 
-const STORAGE_KEY = "wiings_basket";
+const STORAGE_KEY = "mims_basket";
+const LEGACY_STORAGE_KEY = "wiings_basket";
 
 const BasketContext = createContext<BasketContextValue | null>(null);
 
@@ -38,7 +39,7 @@ export function BasketProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<BasketItem[]>([]);
 
   useEffect(() => {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
+    const raw = window.localStorage.getItem(STORAGE_KEY) ?? window.localStorage.getItem(LEGACY_STORAGE_KEY);
 
     if (!raw) {
       return;
@@ -47,8 +48,13 @@ export function BasketProvider({ children }: { children: React.ReactNode }) {
     try {
       const parsed = JSON.parse(raw) as BasketItem[];
       setItems(parsed);
+      if (!window.localStorage.getItem(STORAGE_KEY) && window.localStorage.getItem(LEGACY_STORAGE_KEY)) {
+        window.localStorage.setItem(STORAGE_KEY, raw);
+        window.localStorage.removeItem(LEGACY_STORAGE_KEY);
+      }
     } catch {
       window.localStorage.removeItem(STORAGE_KEY);
+      window.localStorage.removeItem(LEGACY_STORAGE_KEY);
     }
   }, []);
 
