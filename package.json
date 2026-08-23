@@ -39,5 +39,12 @@
   },
   "prisma": {
     "seed": "node prisma/seed.mjs"
+  },
+  "allowScripts": {
+    "prisma@6.19.3": true,
+    "@prisma/client@6.19.3": true,
+    "@prisma/engines@6.19.3": true,
+    "unrs-resolver@1.12.2": true,
+    "sharp@0.34.5": true
   }
 }
