@@ -63,7 +63,7 @@ export default async function RootLayout({
           <div className="app-shell min-h-screen lg:grid lg:grid-cols-[18rem_1fr]">
           <aside className="border-b border-slate-200 bg-slate-950 text-slate-50 lg:min-h-screen lg:border-b-0 lg:border-r">
             <div className="px-4 py-5 sm:px-6 sm:py-6">
-              <p className="text-xs uppercase tracking-[0.3em] text-cyan-300">MIMS</p>
+              <p className="text-xs uppercase tracking-[0.3em] text-cyan-300">SAGOKE TRADING</p>
               <h1 className="mt-2 text-xl font-semibold leading-tight lg:whitespace-nowrap xl:text-2xl">{text.appTitle}</h1>
             </div>
             <nav className="flex gap-2 overflow-x-auto px-3 py-4 lg:grid lg:gap-1 lg:overflow-visible">
