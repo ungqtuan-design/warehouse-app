@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { requireUser } from "@/lib/auth";
+import { formatNumber } from "@/lib/format";
 import { getUiContext } from "@/lib/ui";
 import { getDashboardData } from "@/lib/warehouse-data";
 
@@ -59,7 +60,7 @@ export default async function Home() {
         {cards.map((card) => (
           <article key={card.label} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
             <p className="text-sm text-slate-500">{card.label}</p>
-            <p className="mt-3 text-3xl font-semibold text-slate-950">{card.value}</p>
+            <p className="mt-3 text-3xl font-semibold text-slate-950">{formatNumber(card.value)}</p>
             <p className="mt-2 text-sm text-slate-600">{card.note}</p>
           </article>
         ))}
@@ -104,12 +105,12 @@ export default async function Home() {
                   <td className="px-4 py-3 font-medium text-slate-900">{row.sku}</td>
                   <td className="px-4 py-3 text-slate-900">{row.name}</td>
                   <td className="px-4 py-3 text-slate-600">{row.supplierName}</td>
-                  <td className="px-4 py-3 text-slate-600">{row.khoTongQty}</td>
-                  <td className="px-4 py-3 text-slate-600">{row.khoLeQty}</td>
-                  <td className="px-4 py-3 font-semibold text-slate-950">{row.totalQty}</td>
-                  <td className="px-4 py-3 text-slate-600">{row.outbound7d}</td>
-                  <td className="px-4 py-3 text-slate-600">{row.outbound30d}</td>
-                  <td className="px-4 py-3 text-slate-600">{row.leadTimeDays} {text.daySuffix}</td>
+                  <td className="px-4 py-3 text-slate-600">{formatNumber(row.khoTongQty)}</td>
+                  <td className="px-4 py-3 text-slate-600">{formatNumber(row.khoLeQty)}</td>
+                  <td className="px-4 py-3 font-semibold text-slate-950">{formatNumber(row.totalQty)}</td>
+                  <td className="px-4 py-3 text-slate-600">{formatNumber(row.outbound7d)}</td>
+                  <td className="px-4 py-3 text-slate-600">{formatNumber(row.outbound30d)}</td>
+                  <td className="px-4 py-3 text-slate-600">{formatNumber(row.leadTimeDays)} {text.daySuffix}</td>
                   <td className="px-4 py-3">
                     <span className={`rounded-full px-3 py-1 text-xs font-semibold ${riskClassNames[row.riskLevel]}`}>
                       {riskLabels[row.riskLevel]}

@@ -1,5 +1,6 @@
 import { getProductRows } from "@/lib/warehouse-data";
 import { requireUser } from "@/lib/auth";
+import { formatNumber } from "@/lib/format";
 import { getUiContext } from "@/lib/ui";
 
 export default async function InventoryPage() {
@@ -53,12 +54,12 @@ export default async function InventoryPage() {
                     <div className="text-xs text-slate-500">{product.sku}</div>
                   </td>
                   <td className="px-4 py-3 text-slate-600">{product.supplierName}</td>
-                  <td className="px-4 py-3 text-slate-600">{product.khoTongQty}</td>
-                  <td className="px-4 py-3 text-slate-600">{product.khoLeQty}</td>
-                  <td className="px-4 py-3 font-semibold text-slate-950">{product.totalQty}</td>
+                  <td className="px-4 py-3 text-slate-600">{formatNumber(product.khoTongQty)}</td>
+                  <td className="px-4 py-3 text-slate-600">{formatNumber(product.khoLeQty)}</td>
+                  <td className="px-4 py-3 font-semibold text-slate-950">{formatNumber(product.totalQty)}</td>
                   <td className="px-4 py-3">
                     <span className="rounded-full bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-700">
-                      {product.outbound30d}
+                      {formatNumber(product.outbound30d)}
                     </span>
                   </td>
                 </tr>

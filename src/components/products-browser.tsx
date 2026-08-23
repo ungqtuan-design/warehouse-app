@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 
 import { updateProductInlineAction } from "@/app/actions/warehouse";
 import { useBasket } from "@/components/basket-provider";
+import { formatNumber } from "@/lib/format";
 
 type ProductRow = {
   id: string;
@@ -362,10 +363,10 @@ function ProductTableRows({
             {product.status === "ACTIVE" ? text.active : text.inactive}
           </span>
         </td>
-        <td className="px-4 py-3 text-slate-600">{product.khoTongQty}</td>
-        <td className="px-4 py-3 text-slate-600">{product.khoLeQty}</td>
-        <td className="px-4 py-3 font-semibold text-slate-900">{product.totalQty}</td>
-        <td className="px-4 py-3 text-slate-600">{product.leadTimeDays} {text.daySuffix}</td>
+        <td className="px-4 py-3 text-slate-600">{formatNumber(product.khoTongQty)}</td>
+        <td className="px-4 py-3 text-slate-600">{formatNumber(product.khoLeQty)}</td>
+        <td className="px-4 py-3 font-semibold text-slate-900">{formatNumber(product.totalQty)}</td>
+        <td className="px-4 py-3 text-slate-600">{formatNumber(product.leadTimeDays)} {text.daySuffix}</td>
         <td className="px-4 py-3">
           <input
             type="number"
@@ -376,7 +377,7 @@ function ProductTableRows({
             className="w-24 rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none transition focus:border-cyan-500"
           />
         </td>
-        <td className="px-4 py-3 text-slate-600">{product.costPrice.toLocaleString()}</td>
+        <td className="px-4 py-3 text-slate-600">{formatNumber(product.costPrice)}</td>
         <td className="px-4 py-3">
           <div className="grid gap-2">
             <button

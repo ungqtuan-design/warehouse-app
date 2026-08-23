@@ -1,5 +1,6 @@
 import { InboundBatchEditor } from "@/components/inbound-batch-editor";
 import { requireUser } from "@/lib/auth";
+import { formatNumber } from "@/lib/format";
 import { getUiContext } from "@/lib/ui";
 import { getInboundProductOptions, getInboundRows } from "@/lib/warehouse-data";
 
@@ -47,7 +48,7 @@ export default async function InboundPage() {
                 <tr key={line.id}>
                   <td className="px-4 py-3 font-medium text-slate-900">{line.product}</td>
                   <td className="px-4 py-3 text-slate-600">{line.supplier}</td>
-                  <td className="px-4 py-3 text-slate-700">{line.quantity}</td>
+                  <td className="px-4 py-3 text-slate-700">{formatNumber(line.quantity)}</td>
                   <td className="px-4 py-3 text-slate-600">{line.note}</td>
                   <td className="px-4 py-3 text-slate-600">{line.createdAt}</td>
                 </tr>

@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { submitBasketAction } from "@/app/actions/warehouse";
 import { ActionToast, primaryActionButtonClass, secondaryActionButtonClass, type ActionNotice } from "@/components/action-feedback";
 import { useBasket } from "@/components/basket-provider";
+import { formatNumber } from "@/lib/format";
 
 type BasketWorkspaceText = {
   basket: string;
@@ -101,7 +102,7 @@ export function BasketWorkspace({
           <h2 className="mt-1 text-xl font-semibold text-slate-950">{text.currentBasket}</h2>
         </div>
         <div className="rounded-2xl bg-cyan-50 px-4 py-3 text-sm font-semibold text-cyan-900">
-          {text.totalBasketItems}: {totalCount}
+          {text.totalBasketItems}: {formatNumber(totalCount)}
         </div>
       </div>
 
@@ -131,7 +132,7 @@ export function BasketWorkspace({
                     <td className="px-4 py-3 text-slate-700">{item.name}</td>
                     <td className="px-4 py-3 text-slate-600">{item.supplierName}</td>
                     <td className="px-4 py-3 text-slate-600">{item.warehouseName}</td>
-                    <td className="px-4 py-3 text-slate-700">{item.quantity}</td>
+                    <td className="px-4 py-3 text-slate-700">{formatNumber(item.quantity)}</td>
                     <td className="px-4 py-3">
                       <input
                         value={lineNotes[item.key] ?? ""}
@@ -196,7 +197,7 @@ export function BasketWorkspace({
                   <td className="px-4 py-3 font-medium text-slate-900">{line.sku}</td>
                   <td className="px-4 py-3 text-slate-700">{line.product}</td>
                   <td className="px-4 py-3 text-slate-600">{line.source}</td>
-                  <td className="px-4 py-3 text-slate-700">{line.quantity}</td>
+                  <td className="px-4 py-3 text-slate-700">{formatNumber(line.quantity)}</td>
                   <td className="px-4 py-3 text-slate-600">{line.note}</td>
                   <td className="px-4 py-3 text-slate-600">{line.createdAt}</td>
                 </tr>
