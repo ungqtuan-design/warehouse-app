@@ -45,10 +45,10 @@ export default async function RootLayout({
 
   const baseNavigation = [
     { href: "/", label: text.dashboard, icon: LayoutGrid },
-    { href: "/products", label: text.products, icon: Package },
     { href: "/suppliers", label: text.suppliers, icon: Truck },
     { href: "/inbound", label: text.inbound, icon: Boxes },
     { href: "/inventory", label: text.inventory, icon: ClipboardList },
+    { href: "/products", label: text.productsNavLabel, icon: Package },
     { href: "/basket", label: text.basket, icon: ShoppingBasket },
   ];
 
