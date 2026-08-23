@@ -22,6 +22,7 @@ const supplierSchema = z.object({
 
 const productSchema = z.object({
   name: z.string().trim().min(1),
+  sku: z.string().trim().min(1),
   supplierId: z.string().trim().min(1),
   leadTimeDays: z.coerce.number().int().min(0).max(365),
   isActive: z.boolean(),
@@ -80,18 +81,6 @@ function toOptionalValue(value: string | undefined) {
   }
 
   return value;
-}
-
-function createSku(name: string) {
-  const base = name
-    .normalize("NFKD")
-    .replace(/[^\w\s-]/g, "")
-    .trim()
-    .replace(/\s+/g, "-")
-    .toUpperCase()
-    .slice(0, 12) || "ITEM";
-
-  return `${base}-${Date.now().toString(36).toUpperCase()}`;
 }
 
 export async function createSupplierAction(
@@ -158,6 +147,7 @@ export async function createProductAction(
   try {
     const parsed = productSchema.parse({
       name: String(formData.get("name") ?? ""),
+      sku: String(formData.get("sku") ?? ""),
       supplierId: String(formData.get("supplierId") ?? ""),
       leadTimeDays: formData.get("leadTimeDays") ?? "0",
       isActive: formData.get("isActive") === "on",
@@ -165,7 +155,7 @@ export async function createProductAction(
 
     await prisma.product.create({
       data: {
-        sku: createSku(parsed.name),
+        sku: parsed.sku,
         name: parsed.name,
         supplierId: parsed.supplierId,
         imageUrl: imageDataUrl,
@@ -173,7 +163,18 @@ export async function createProductAction(
         status: parsed.isActive ? "ACTIVE" : "INACTIVE",
       },
     });
-  } catch {
+  } catch (error) {
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2002" &&
+      (error.meta?.target as string[] | undefined)?.includes("sku")
+    ) {
+      return {
+        status: "error",
+        message: "product-sku-taken",
+      };
+    }
+
     return {
       status: "error",
       message: "product-create-failed",

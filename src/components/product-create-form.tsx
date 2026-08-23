@@ -9,17 +9,20 @@ import { idleFormActionState } from "@/lib/action-state";
 
 type ProductCreateText = {
   product: string;
+  sku: string;
   supplier: string;
   productImageUpload: string;
   leadTimeDays: string;
   active: string;
   enterProductName: string;
+  enterSku: string;
   selectSupplier: string;
   submit: string;
   submitting: string;
   invalidImageMessage: string;
   productCreateSuccess: string;
   productCreateError: string;
+  productSkuTaken: string;
 };
 
 type SupplierOption = {
@@ -48,12 +51,24 @@ export function ProductCreateForm({
     }
 
     if (state.status === "error") {
-      setNotice({
-        kind: "error",
-        message: state.message === "invalid-image" ? text.invalidImageMessage : text.productCreateError,
-      });
+      const message =
+        state.message === "invalid-image"
+          ? text.invalidImageMessage
+          : state.message === "product-sku-taken"
+            ? text.productSkuTaken
+            : text.productCreateError;
+
+      setNotice({ kind: "error", message });
     }
-  }, [router, state.message, state.status, text.invalidImageMessage, text.productCreateError, text.productCreateSuccess]);
+  }, [
+    router,
+    state.message,
+    state.status,
+    text.invalidImageMessage,
+    text.productCreateError,
+    text.productCreateSuccess,
+    text.productSkuTaken,
+  ]);
 
   return (
     <>
@@ -61,6 +76,10 @@ export function ProductCreateForm({
         <label className="grid gap-2 text-sm font-medium text-slate-700">
           {text.product}
           <input name="name" className="rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-cyan-500" placeholder={text.enterProductName} required />
+        </label>
+        <label className="grid gap-2 text-sm font-medium text-slate-700">
+          {text.sku}
+          <input name="sku" className="rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-cyan-500" placeholder={text.enterSku} required />
         </label>
         <label className="grid gap-2 text-sm font-medium text-slate-700">
           {text.supplier}
