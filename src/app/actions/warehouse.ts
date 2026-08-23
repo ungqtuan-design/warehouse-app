@@ -24,11 +24,12 @@ const productSchema = z.object({
   name: z.string().trim().min(1),
   sku: z.string().trim().min(1),
   supplierId: z.string().trim().min(1),
+  costPrice: z.coerce.number().min(0),
   leadTimeDays: z.coerce.number().int().min(0).max(365),
   isActive: z.boolean(),
 });
 
-const updateProductSchema = productSchema.extend({
+const updateProductSchema = productSchema.omit({ sku: true }).extend({
   productId: z.string().trim().min(1),
 });
 
@@ -149,6 +150,7 @@ export async function createProductAction(
       name: String(formData.get("name") ?? ""),
       sku: String(formData.get("sku") ?? ""),
       supplierId: String(formData.get("supplierId") ?? ""),
+      costPrice: formData.get("costPrice") ?? "0",
       leadTimeDays: formData.get("leadTimeDays") ?? "0",
       isActive: formData.get("isActive") === "on",
     });
@@ -159,6 +161,7 @@ export async function createProductAction(
         name: parsed.name,
         supplierId: parsed.supplierId,
         imageUrl: imageDataUrl,
+        costPrice: parsed.costPrice,
         leadTimeDays: parsed.leadTimeDays,
         status: parsed.isActive ? "ACTIVE" : "INACTIVE",
       },
@@ -214,6 +217,7 @@ export async function updateProductInlineAction(
       productId: String(formData.get("productId") ?? ""),
       name: String(formData.get("name") ?? ""),
       supplierId: String(formData.get("supplierId") ?? ""),
+      costPrice: formData.get("costPrice") ?? "0",
       leadTimeDays: formData.get("leadTimeDays") ?? "0",
       isActive: formData.get("isActive") === "on",
     });
@@ -225,6 +229,7 @@ export async function updateProductInlineAction(
       data: {
         name: parsed.name,
         supplierId: parsed.supplierId,
+        costPrice: parsed.costPrice,
         leadTimeDays: parsed.leadTimeDays,
         status: parsed.isActive ? "ACTIVE" : "INACTIVE",
         ...(imageDataUrl === undefined ? {} : { imageUrl: imageDataUrl }),

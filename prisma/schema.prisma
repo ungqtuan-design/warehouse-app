@@ -75,6 +75,7 @@ model Product {
   sku                   String                 @unique
   name                  String
   imageUrl              String?
+  costPrice             Decimal                @default(0) @db.Decimal(14, 2)
   leadTimeDays          Int                    @default(0)
   status                ProductStatus          @default(ACTIVE)
   supplierId            String

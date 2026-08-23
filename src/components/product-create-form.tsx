@@ -10,12 +10,14 @@ import { idleFormActionState } from "@/lib/action-state";
 type ProductCreateText = {
   product: string;
   sku: string;
+  costPrice: string;
   supplier: string;
   productImageUpload: string;
   leadTimeDays: string;
   active: string;
   enterProductName: string;
   enterSku: string;
+  enterCostPrice: string;
   selectSupplier: string;
   submit: string;
   submitting: string;
@@ -93,6 +95,10 @@ export function ProductCreateForm({
         <label className="grid gap-2 text-sm font-medium text-slate-700 lg:col-span-2">
           {text.productImageUpload}
           <input name="imageFile" type="file" accept="image/*" className="rounded-xl border border-slate-300 px-4 py-3 outline-none transition file:mr-4 file:rounded-full file:border-0 file:bg-slate-900 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white" />
+        </label>
+        <label className="grid gap-2 text-sm font-medium text-slate-700">
+          {text.costPrice}
+          <input name="costPrice" type="number" min="0" step="0.01" defaultValue="0" placeholder={text.enterCostPrice} className="rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-cyan-500" />
         </label>
         <label className="grid gap-2 text-sm font-medium text-slate-700">
           {text.leadTimeDays}

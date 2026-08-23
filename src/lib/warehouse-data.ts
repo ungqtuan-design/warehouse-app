@@ -72,6 +72,7 @@ export async function getProductRows() {
       sku: product.sku,
       name: product.name,
       imageUrl: product.imageUrl,
+      costPrice: Number(product.costPrice),
       leadTimeDays: product.leadTimeDays,
       supplierId: product.supplierId,
       supplierName: product.supplier.name,

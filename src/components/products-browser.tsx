@@ -12,6 +12,7 @@ type ProductRow = {
   sku: string;
   name: string;
   imageUrl: string | null;
+  costPrice: number;
   leadTimeDays: number;
   supplierId: string;
   supplierName: string;
@@ -43,6 +44,8 @@ type ProductsBrowserText = {
   khoLe: string;
   total: string;
   leadTimeDays: string;
+  costPrice: string;
+  enterCostPrice: string;
   basketAction: string;
   active: string;
   inactive: string;
@@ -162,19 +165,20 @@ export function ProductsBrowser({
               <th className="px-4 py-3 font-medium">{text.total}</th>
               <th className="px-4 py-3 font-medium">{text.leadTimeDays}</th>
               <th className="px-4 py-3 font-medium">{text.quantity}</th>
+              <th className="px-4 py-3 font-medium">{text.costPrice}</th>
               <th className="px-4 py-3 font-medium">{text.basketAction}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-200 bg-white">
             {!hasSearched ? (
               <tr>
-                <td colSpan={12} className="px-4 py-10 text-center text-sm text-slate-500">
+                <td colSpan={13} className="px-4 py-10 text-center text-sm text-slate-500">
                   {products.length === 0 ? text.noProductsRows : text.searchPrompt}
                 </td>
               </tr>
             ) : results.length === 0 ? (
               <tr>
-                <td colSpan={12} className="px-4 py-10 text-center text-sm text-slate-500">
+                <td colSpan={13} className="px-4 py-10 text-center text-sm text-slate-500">
                   {text.noProductMatches}
                 </td>
               </tr>
@@ -372,6 +376,7 @@ function ProductTableRows({
             className="w-24 rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none transition focus:border-cyan-500"
           />
         </td>
+        <td className="px-4 py-3 text-slate-600">{product.costPrice.toLocaleString()}</td>
         <td className="px-4 py-3">
           <div className="grid gap-2">
             <button
@@ -414,7 +419,7 @@ function ProductEditInlineRow({
 }) {
   return (
     <tr className="bg-slate-50">
-      <td colSpan={12} className="px-4 py-4">
+      <td colSpan={13} className="px-4 py-4">
         <form id={formId} action={formAction} className="grid gap-4 lg:grid-cols-2">
           <input type="hidden" name="productId" value={product.id} />
           <label className="grid gap-2 text-sm font-medium text-slate-700">
@@ -432,6 +437,10 @@ function ProductEditInlineRow({
           <label className="grid gap-2 text-sm font-medium text-slate-700 lg:col-span-2">
             {text.productImageUpload}
             <input name="imageFile" type="file" accept="image/*" className="rounded-xl border border-slate-300 px-4 py-3 outline-none transition file:mr-4 file:rounded-full file:border-0 file:bg-slate-900 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white" />
+          </label>
+          <label className="grid gap-2 text-sm font-medium text-slate-700">
+            {text.costPrice}
+            <input name="costPrice" type="number" min="0" step="0.01" defaultValue={product.costPrice} placeholder={text.enterCostPrice} className="rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-cyan-500" />
           </label>
           <label className="grid gap-2 text-sm font-medium text-slate-700">
             {text.leadTimeDays}
