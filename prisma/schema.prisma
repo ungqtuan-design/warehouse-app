@@ -62,6 +62,9 @@ model Supplier {
   phone       String?
   email       String?
   address     String?
+  paymentTerms   String?
+  deliveryMethod String?
+  pastIssues     String?
   isActive    Boolean   @default(true)
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt

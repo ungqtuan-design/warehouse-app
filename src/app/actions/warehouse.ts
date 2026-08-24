@@ -17,6 +17,9 @@ const supplierSchema = z.object({
   phone: z.string().trim().optional(),
   email: z.string().trim().email().optional().or(z.literal("")),
   address: z.string().trim().optional(),
+  paymentTerms: z.string().trim().optional(),
+  deliveryMethod: z.string().trim().optional(),
+  pastIssues: z.string().trim().optional(),
   isActive: z.boolean(),
 });
 
@@ -97,6 +100,9 @@ export async function createSupplierAction(
       phone: String(formData.get("phone") ?? ""),
       email: String(formData.get("email") ?? ""),
       address: String(formData.get("address") ?? ""),
+      paymentTerms: String(formData.get("paymentTerms") ?? ""),
+      deliveryMethod: String(formData.get("deliveryMethod") ?? ""),
+      pastIssues: String(formData.get("pastIssues") ?? ""),
       isActive: formData.get("isActive") === "on",
     });
 
@@ -107,6 +113,9 @@ export async function createSupplierAction(
         phone: toOptionalValue(parsed.phone),
         email: toOptionalValue(parsed.email),
         address: toOptionalValue(parsed.address),
+        paymentTerms: toOptionalValue(parsed.paymentTerms),
+        deliveryMethod: toOptionalValue(parsed.deliveryMethod),
+        pastIssues: toOptionalValue(parsed.pastIssues),
         isActive: parsed.isActive,
       },
     });
@@ -331,6 +340,9 @@ export async function updateSupplierAction(
       phone: String(formData.get("phone") ?? ""),
       email: String(formData.get("email") ?? ""),
       address: String(formData.get("address") ?? ""),
+      paymentTerms: String(formData.get("paymentTerms") ?? ""),
+      deliveryMethod: String(formData.get("deliveryMethod") ?? ""),
+      pastIssues: String(formData.get("pastIssues") ?? ""),
       isActive: formData.get("isActive") === "on",
     });
 
@@ -344,6 +356,9 @@ export async function updateSupplierAction(
         phone: toOptionalValue(parsed.phone),
         email: toOptionalValue(parsed.email),
         address: toOptionalValue(parsed.address),
+        paymentTerms: toOptionalValue(parsed.paymentTerms),
+        deliveryMethod: toOptionalValue(parsed.deliveryMethod),
+        pastIssues: toOptionalValue(parsed.pastIssues),
         isActive: parsed.isActive,
       },
     });

@@ -1,0 +1,4 @@
+ALTER TABLE "Supplier"
+  ADD COLUMN IF NOT EXISTS "paymentTerms" TEXT,
+  ADD COLUMN IF NOT EXISTS "deliveryMethod" TEXT,
+  ADD COLUMN IF NOT EXISTS "pastIssues" TEXT;

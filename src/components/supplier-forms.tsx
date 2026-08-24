@@ -19,6 +19,12 @@ type SupplierText = {
   phoneNumberPlaceholder: string;
   emailAddressPlaceholder: string;
   basicSupplierAddressPlaceholder: string;
+  paymentTerms: string;
+  paymentTermsPlaceholder: string;
+  deliveryMethod: string;
+  deliveryMethodPlaceholder: string;
+  pastIssues: string;
+  pastIssuesPlaceholder: string;
   submit: string;
   submitting: string;
   updateSupplier: string;
@@ -35,6 +41,9 @@ type SupplierRow = {
   phone: string | null;
   email: string | null;
   address: string | null;
+  paymentTerms: string | null;
+  deliveryMethod: string | null;
+  pastIssues: string | null;
   isActive: boolean;
 };
 
@@ -81,6 +90,18 @@ export function SupplierCreateForm({ text }: { text: SupplierText }) {
         <label className="grid gap-2 text-sm font-medium text-slate-700">
           {text.address}
           <textarea name="address" className="min-h-28 rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-cyan-500" placeholder={text.basicSupplierAddressPlaceholder} />
+        </label>
+        <label className="grid gap-2 text-sm font-medium text-slate-700">
+          {text.paymentTerms}
+          <textarea name="paymentTerms" className="min-h-20 rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-cyan-500" placeholder={text.paymentTermsPlaceholder} />
+        </label>
+        <label className="grid gap-2 text-sm font-medium text-slate-700">
+          {text.deliveryMethod}
+          <textarea name="deliveryMethod" className="min-h-20 rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-cyan-500" placeholder={text.deliveryMethodPlaceholder} />
+        </label>
+        <label className="grid gap-2 text-sm font-medium text-slate-700">
+          {text.pastIssues}
+          <textarea name="pastIssues" className="min-h-20 rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-cyan-500" placeholder={text.pastIssuesPlaceholder} />
         </label>
         <label className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-700">
           <input name="isActive" type="checkbox" className="h-4 w-4 rounded border-slate-300" defaultChecked />
@@ -137,6 +158,18 @@ export function SupplierUpdateForm({ supplier, text }: { supplier: SupplierRow; 
         <label className="grid gap-2 text-sm font-medium text-slate-700">
           {text.address}
           <textarea name="address" defaultValue={supplier.address ?? ""} className="min-h-28 rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-cyan-500" />
+        </label>
+        <label className="grid gap-2 text-sm font-medium text-slate-700">
+          {text.paymentTerms}
+          <textarea name="paymentTerms" defaultValue={supplier.paymentTerms ?? ""} className="min-h-20 rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-cyan-500" />
+        </label>
+        <label className="grid gap-2 text-sm font-medium text-slate-700">
+          {text.deliveryMethod}
+          <textarea name="deliveryMethod" defaultValue={supplier.deliveryMethod ?? ""} className="min-h-20 rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-cyan-500" />
+        </label>
+        <label className="grid gap-2 text-sm font-medium text-slate-700">
+          {text.pastIssues}
+          <textarea name="pastIssues" defaultValue={supplier.pastIssues ?? ""} className="min-h-20 rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-cyan-500" />
         </label>
         <label className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700">
           <input name="isActive" type="checkbox" className="h-4 w-4 rounded border-slate-300" defaultChecked={supplier.isActive} />

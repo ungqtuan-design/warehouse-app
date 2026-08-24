@@ -11,6 +11,9 @@ type SupplierRow = {
   phone: string | null;
   email: string | null;
   address: string | null;
+  paymentTerms: string | null;
+  deliveryMethod: string | null;
+  pastIssues: string | null;
   isActive: boolean;
 };
 
@@ -40,6 +43,12 @@ type SuppliersWorkspaceText = {
   phoneNumberPlaceholder: string;
   emailAddressPlaceholder: string;
   basicSupplierAddressPlaceholder: string;
+  paymentTerms: string;
+  paymentTermsPlaceholder: string;
+  deliveryMethod: string;
+  deliveryMethodPlaceholder: string;
+  pastIssues: string;
+  pastIssuesPlaceholder: string;
   submit: string;
   submitting: string;
   updateSupplier: string;

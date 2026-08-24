@@ -228,6 +228,9 @@ export async function getSupplierExportRows() {
     email: supplier.email ?? "",
     phone: supplier.phone ?? "",
     address: supplier.address ?? "",
+    payment_terms: supplier.paymentTerms ?? "",
+    delivery_method: supplier.deliveryMethod ?? "",
+    past_issues: supplier.pastIssues ?? "",
     status: supplier.isActive ? "ACTIVE" : "INACTIVE",
   }));
 }
