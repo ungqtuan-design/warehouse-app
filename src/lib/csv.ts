@@ -1,6 +1,8 @@
+const BOM = "\uFEFF";
+
 export function toCsv(rows: Array<Record<string, unknown>>) {
   if (rows.length === 0) {
-    return "";
+    return BOM;
   }
 
   const headers = Object.keys(rows[0]);
@@ -18,5 +20,5 @@ export function toCsv(rows: Array<Record<string, unknown>>) {
     lines.push(values.join(","));
   }
 
-  return lines.join("\n");
+  return BOM + lines.join("\n");
 }
