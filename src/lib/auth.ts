@@ -16,6 +16,17 @@ function hashToken(token: string) {
   return createHash("sha256").update(token).digest("hex");
 }
 
+function deleteSessionCookies(cookieStore: Awaited<ReturnType<typeof cookies>>) {
+  try {
+    cookieStore.delete(SESSION_COOKIE_NAME);
+    cookieStore.delete(LEGACY_SESSION_COOKIE_NAME);
+  } catch {
+    // Cookies can only be mutated in a Server Action or Route Handler.
+    // Reading a stale cookie during a plain render is fine; it will be
+    // cleared the next time a Server Action or Route Handler runs.
+  }
+}
+
 export const getCurrentSession = cache(async () => {
   const cookieStore = await cookies();
   const token = cookieStore.get(SESSION_COOKIE_NAME)?.value ?? cookieStore.get(LEGACY_SESSION_COOKIE_NAME)?.value;
@@ -40,8 +51,7 @@ export const getCurrentSession = cache(async () => {
   });
 
   if (!session) {
-    cookieStore.delete(SESSION_COOKIE_NAME);
-    cookieStore.delete(LEGACY_SESSION_COOKIE_NAME);
+    deleteSessionCookies(cookieStore);
     return null;
   }
 
@@ -52,8 +62,7 @@ export const getCurrentSession = cache(async () => {
       },
     });
 
-    cookieStore.delete(SESSION_COOKIE_NAME);
-    cookieStore.delete(LEGACY_SESSION_COOKIE_NAME);
+    deleteSessionCookies(cookieStore);
     return null;
   }
 
