@@ -32,7 +32,7 @@ const productSchema = z.object({
   isActive: z.boolean(),
 });
 
-const updateProductSchema = productSchema.omit({ sku: true }).extend({
+const updateProductSchema = productSchema.extend({
   productId: z.string().trim().min(1),
 });
 
@@ -225,6 +225,7 @@ export async function updateProductInlineAction(
     const parsed = updateProductSchema.parse({
       productId: String(formData.get("productId") ?? ""),
       name: String(formData.get("name") ?? ""),
+      sku: String(formData.get("sku") ?? ""),
       supplierId: String(formData.get("supplierId") ?? ""),
       costPrice: formData.get("costPrice") ?? "0",
       leadTimeDays: formData.get("leadTimeDays") ?? "0",
@@ -237,6 +238,7 @@ export async function updateProductInlineAction(
       },
       data: {
         name: parsed.name,
+        sku: parsed.sku,
         supplierId: parsed.supplierId,
         costPrice: parsed.costPrice,
         leadTimeDays: parsed.leadTimeDays,
@@ -244,7 +246,18 @@ export async function updateProductInlineAction(
         ...(imageDataUrl === undefined ? {} : { imageUrl: imageDataUrl }),
       },
     });
-  } catch {
+  } catch (error) {
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2002" &&
+      (error.meta?.target as string[] | undefined)?.includes("sku")
+    ) {
+      return {
+        status: "error" as const,
+        message: "product-sku-taken",
+      };
+    }
+
     return {
       status: "error" as const,
       message: "Unable to update product.",

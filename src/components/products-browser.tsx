@@ -67,6 +67,9 @@ type ProductsBrowserText = {
   updateProductError: string;
   invalidImageMessage: string;
   productImageUpload: string;
+  sku: string;
+  enterSku: string;
+  productSkuTaken: string;
 };
 
 type WarehouseFilter = "ALL" | "KHO_TONG" | "KHO_LE";
@@ -308,10 +311,24 @@ function ProductTableRows({
     }
 
     if (state.status === "error") {
-      const message = state.message === "Invalid image file." ? text.invalidImageMessage : text.updateProductError;
+      const message =
+        state.message === "Invalid image file."
+          ? text.invalidImageMessage
+          : state.message === "product-sku-taken"
+            ? text.productSkuTaken
+            : text.updateProductError;
       onEditResult("error", message);
     }
-  }, [onEditResult, router, state.message, state.status, text.invalidImageMessage, text.updateProductError, text.updateProductSuccess]);
+  }, [
+    onEditResult,
+    router,
+    state.message,
+    state.status,
+    text.invalidImageMessage,
+    text.productSkuTaken,
+    text.updateProductError,
+    text.updateProductSuccess,
+  ]);
 
   return (
     <>
@@ -426,6 +443,10 @@ function ProductEditInlineRow({
           <label className="grid gap-2 text-sm font-medium text-slate-700">
             {text.product}
             <input name="name" defaultValue={product.name} className="rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-cyan-500" required />
+          </label>
+          <label className="grid gap-2 text-sm font-medium text-slate-700">
+            {text.sku}
+            <input name="sku" defaultValue={product.sku} placeholder={text.enterSku} className="rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-cyan-500" required />
           </label>
           <label className="grid gap-2 text-sm font-medium text-slate-700">
             {text.supplier}
