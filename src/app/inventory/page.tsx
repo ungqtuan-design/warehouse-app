@@ -1,4 +1,4 @@
-import { getProductRows } from "@/lib/warehouse-data";
+import { getProductInventoryRows } from "@/lib/warehouse-data";
 import { requireUser } from "@/lib/auth";
 import { formatNumber } from "@/lib/format";
 import { getUiContext } from "@/lib/ui";
@@ -6,7 +6,7 @@ import { getUiContext } from "@/lib/ui";
 export default async function InventoryPage() {
   await requireUser();
 
-  const [rows, { text }] = await Promise.all([getProductRows(), getUiContext()]);
+  const [rows, { text }] = await Promise.all([getProductInventoryRows(), getUiContext()]);
   const rankedProducts = rows.sort((left, right) => {
     if (left.totalQty === right.totalQty) {
       return right.outbound30d - left.outbound30d;

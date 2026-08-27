@@ -1,4 +1,4 @@
-import { TransactionType } from "@prisma/client";
+import { Prisma, TransactionType } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
 
@@ -32,63 +32,105 @@ export async function getSuppliers() {
   });
 }
 
+const productListSelect = {
+  id: true,
+  sku: true,
+  name: true,
+  costPrice: true,
+  leadTimeDays: true,
+  supplierId: true,
+  status: true,
+  supplier: { select: { name: true } },
+  inventoryBalances: { select: { quantity: true, location: { select: { code: true } } } },
+} satisfies Prisma.ProductSelect;
+
+function mapProductRow<T extends Prisma.ProductGetPayload<{ select: typeof productListSelect }> & { imageUrl: string | null }>(
+  product: T,
+  outbound7d: number,
+  outbound30d: number,
+) {
+  const khoTongQty = product.inventoryBalances.find((balance) => balance.location.code === "KHO_TONG")?.quantity ?? 0;
+  const khoLeQty = product.inventoryBalances.find((balance) => balance.location.code === "KHO_LE")?.quantity ?? 0;
+
+  return {
+    id: product.id,
+    sku: product.sku,
+    name: product.name,
+    imageUrl: product.imageUrl,
+    costPrice: Number(product.costPrice),
+    leadTimeDays: product.leadTimeDays,
+    supplierId: product.supplierId,
+    supplierName: product.supplier.name,
+    status: product.status,
+    khoTongQty,
+    khoLeQty,
+    totalQty: khoTongQty + khoLeQty,
+    outbound7d,
+    outbound30d,
+  };
+}
+
+function splitOutboundStats(transactions: { quantity: number; createdAt: Date }[], since7d: Date) {
+  const outbound30d = transactions.reduce((sum, transaction) => sum + transaction.quantity, 0);
+  const outbound7d = transactions
+    .filter((transaction) => transaction.createdAt >= since7d)
+    .reduce((sum, transaction) => sum + transaction.quantity, 0);
+
+  return { outbound7d, outbound30d };
+}
+
+// Includes the product photo (base64). Only call this where the photo is
+// actually rendered (the catalog page) — Neon bills by data transferred, and
+// this field is large enough to matter.
 export async function getProductRows() {
   const since30d = new Date(Date.now() - THIRTY_DAYS_MS);
   const since7d = new Date(Date.now() - SEVEN_DAYS_MS);
   const products = await prisma.product.findMany({
-    include: {
-      supplier: true,
-      inventoryBalances: {
-        include: {
-          location: true,
-        },
-      },
+    select: {
+      ...productListSelect,
+      imageUrl: true,
       inventoryTransactions: {
-        where: {
-          type: TransactionType.CUSTOMER_OUT,
-          createdAt: {
-            gte: since30d,
-          },
-        },
-        select: {
-          quantity: true,
-          createdAt: true,
-        },
+        where: { type: TransactionType.CUSTOMER_OUT, createdAt: { gte: since30d } },
+        select: { quantity: true, createdAt: true },
       },
     },
     orderBy: [{ name: "asc" }],
   });
 
   return products.map((product) => {
-    const khoTongQty = product.inventoryBalances.find((balance) => balance.location.code === "KHO_TONG")?.quantity ?? 0;
-    const khoLeQty = product.inventoryBalances.find((balance) => balance.location.code === "KHO_LE")?.quantity ?? 0;
-    const outbound30d = product.inventoryTransactions.reduce((sum, transaction) => sum + transaction.quantity, 0);
-    const outbound7d = product.inventoryTransactions
-      .filter((transaction) => transaction.createdAt >= since7d)
-      .reduce((sum, transaction) => sum + transaction.quantity, 0);
+    const { outbound7d, outbound30d } = splitOutboundStats(product.inventoryTransactions, since7d);
 
-    return {
-      id: product.id,
-      sku: product.sku,
-      name: product.name,
-      imageUrl: product.imageUrl,
-      costPrice: Number(product.costPrice),
-      leadTimeDays: product.leadTimeDays,
-      supplierId: product.supplierId,
-      supplierName: product.supplier.name,
-      status: product.status,
-      khoTongQty,
-      khoLeQty,
-      totalQty: khoTongQty + khoLeQty,
-      outbound7d,
-      outbound30d,
-    };
+    return mapProductRow(product, outbound7d, outbound30d);
+  });
+}
+
+// Same rows, without the product photo. Use this for anything that doesn't
+// display images (dashboard, inventory page, CSV exports) so those requests
+// don't drag every product's photo across the network for nothing.
+export async function getProductInventoryRows() {
+  const since30d = new Date(Date.now() - THIRTY_DAYS_MS);
+  const since7d = new Date(Date.now() - SEVEN_DAYS_MS);
+  const products = await prisma.product.findMany({
+    select: {
+      ...productListSelect,
+      inventoryTransactions: {
+        where: { type: TransactionType.CUSTOMER_OUT, createdAt: { gte: since30d } },
+        select: { quantity: true, createdAt: true },
+      },
+    },
+    orderBy: [{ name: "asc" }],
+  });
+
+  return products.map((product) => {
+    const { outbound7d, outbound30d } = splitOutboundStats(product.inventoryTransactions, since7d);
+
+    return mapProductRow({ ...product, imageUrl: null }, outbound7d, outbound30d);
   });
 }
 
 export async function getDashboardData() {
   const [products, inboundCount30d, customerOrders30d] = await Promise.all([
-    getProductRows(),
+    getProductInventoryRows(),
     prisma.inventoryTransaction.count({
       where: {
         type: TransactionType.MANUFACTURER_IN,
@@ -154,13 +196,12 @@ export async function getInboundRows() {
     where: {
       type: TransactionType.MANUFACTURER_IN,
     },
-    include: {
-      product: {
-        include: {
-          supplier: true,
-        },
-      },
-      destinationLocation: true,
+    select: {
+      id: true,
+      quantity: true,
+      note: true,
+      createdAt: true,
+      product: { select: { name: true, supplier: { select: { name: true } } } },
     },
     orderBy: [{ createdAt: "desc" }],
     take: 20,
@@ -181,8 +222,11 @@ export async function getInboundProductOptions() {
     where: {
       status: "ACTIVE",
     },
-    include: {
-      supplier: true,
+    select: {
+      id: true,
+      sku: true,
+      name: true,
+      supplier: { select: { name: true } },
     },
     orderBy: [{ name: "asc" }],
   });
@@ -200,9 +244,13 @@ export async function getBasketRows() {
     where: {
       type: TransactionType.CUSTOMER_OUT,
     },
-    include: {
-      product: true,
-      sourceLocation: true,
+    select: {
+      id: true,
+      quantity: true,
+      note: true,
+      createdAt: true,
+      product: { select: { sku: true, name: true } },
+      sourceLocation: { select: { name: true } },
     },
     orderBy: [{ createdAt: "desc" }],
     take: 20,
@@ -236,7 +284,7 @@ export async function getSupplierExportRows() {
 }
 
 export async function getStockExportRows() {
-  const products = await getProductRows();
+  const products = await getProductInventoryRows();
 
   return products.map((product) => ({
     sku: product.sku,
@@ -252,14 +300,15 @@ export async function getStockExportRows() {
 
 export async function getOrderExportRows() {
   const transactions = await prisma.inventoryTransaction.findMany({
-    include: {
-      product: {
-        include: {
-          supplier: true,
-        },
-      },
-      sourceLocation: true,
-      destinationLocation: true,
+    select: {
+      createdAt: true,
+      type: true,
+      quantity: true,
+      referenceNo: true,
+      note: true,
+      product: { select: { sku: true, name: true, supplier: { select: { name: true } } } },
+      sourceLocation: { select: { name: true } },
+      destinationLocation: { select: { name: true } },
     },
     orderBy: [{ createdAt: "desc" }],
   });
