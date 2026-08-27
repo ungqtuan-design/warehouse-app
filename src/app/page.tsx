@@ -8,7 +8,7 @@ import { getDashboardData } from "@/lib/warehouse-data";
 export default async function Home() {
   await requireUser();
 
-  const [{ text }, { metrics, watchRows }] = await Promise.all([getUiContext(), getDashboardData({ includeImage: true })]);
+  const [{ text }, { metrics, watchRows }] = await Promise.all([getUiContext(), getDashboardData()]);
 
   const riskClassNames = {
     red: "bg-rose-50 text-rose-700",
@@ -81,7 +81,6 @@ export default async function Home() {
           <table className="min-w-[1080px] divide-y divide-slate-200 text-left text-sm lg:min-w-full">
             <thead className="bg-slate-50 text-slate-500">
               <tr>
-                <th className="px-4 py-3 font-medium">{text.image}</th>
                 <th className="px-4 py-3 font-medium">SKU</th>
                 <th className="px-4 py-3 font-medium">{text.product}</th>
                 <th className="px-4 py-3 font-medium">{text.supplier}</th>
@@ -97,19 +96,12 @@ export default async function Home() {
             <tbody className="divide-y divide-slate-200 bg-white">
               {watchRows.length === 0 ? (
                 <tr>
-                  <td colSpan={11} className="px-4 py-10 text-center text-sm text-slate-500">
+                  <td colSpan={10} className="px-4 py-10 text-center text-sm text-slate-500">
                     {text.noInventoryRows}
                   </td>
                 </tr>
               ) : watchRows.map((row) => (
                 <tr key={row.id}>
-                  <td className="px-4 py-3">
-                    {row.imageUrl ? (
-                      <img src={row.imageUrl} alt={row.name} className="h-10 w-10 rounded-lg border border-slate-200 object-cover" />
-                    ) : (
-                      <span className="text-xs text-slate-500">{text.noImage}</span>
-                    )}
-                  </td>
                   <td className="px-4 py-3 font-medium text-slate-900">{row.sku}</td>
                   <td className="px-4 py-3 text-slate-900">{row.name}</td>
                   <td className="px-4 py-3 text-slate-600">{row.supplierName}</td>
