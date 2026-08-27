@@ -128,9 +128,10 @@ export async function getProductInventoryRows() {
   });
 }
 
-export async function getDashboardData() {
+export async function getDashboardData(options: { includeImage?: boolean } = {}) {
+  const includeImage = options.includeImage ?? false;
   const [products, inboundCount30d, customerOrders30d] = await Promise.all([
-    getProductInventoryRows(),
+    includeImage ? getProductRows() : getProductInventoryRows(),
     prisma.inventoryTransaction.count({
       where: {
         type: TransactionType.MANUFACTURER_IN,

@@ -1,4 +1,4 @@
-import { getProductInventoryRows } from "@/lib/warehouse-data";
+import { getProductRows } from "@/lib/warehouse-data";
 import { requireUser } from "@/lib/auth";
 import { formatNumber } from "@/lib/format";
 import { getUiContext } from "@/lib/ui";
@@ -6,7 +6,7 @@ import { getUiContext } from "@/lib/ui";
 export default async function InventoryPage() {
   await requireUser();
 
-  const [rows, { text }] = await Promise.all([getProductInventoryRows(), getUiContext()]);
+  const [rows, { text }] = await Promise.all([getProductRows(), getUiContext()]);
   const rankedProducts = rows.sort((left, right) => {
     if (left.totalQty === right.totalQty) {
       return right.outbound30d - left.outbound30d;
@@ -32,6 +32,7 @@ export default async function InventoryPage() {
           <table className="min-w-[860px] divide-y divide-slate-200 text-left text-sm lg:min-w-full">
             <thead className="bg-slate-50 text-slate-500">
               <tr>
+                <th className="px-4 py-3 font-medium">{text.image}</th>
                 <th className="px-4 py-3 font-medium">{text.product}</th>
                 <th className="px-4 py-3 font-medium">{text.supplier}</th>
                 <th className="px-4 py-3 font-medium">{text.khoTong}</th>
@@ -43,12 +44,19 @@ export default async function InventoryPage() {
             <tbody className="divide-y divide-slate-200 bg-white">
               {rankedProducts.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-10 text-center text-sm text-slate-500">
+                  <td colSpan={7} className="px-4 py-10 text-center text-sm text-slate-500">
                     {text.noInventoryRows}
                   </td>
                 </tr>
               ) : rankedProducts.map((product) => (
                 <tr key={product.id}>
+                  <td className="px-4 py-3">
+                    {product.imageUrl ? (
+                      <img src={product.imageUrl} alt={product.name} className="h-10 w-10 rounded-lg border border-slate-200 object-cover" />
+                    ) : (
+                      <span className="text-xs text-slate-500">{text.noImage}</span>
+                    )}
+                  </td>
                   <td className="px-4 py-3">
                     <div className="font-medium text-slate-900">{product.name}</div>
                     <div className="text-xs text-slate-500">{product.sku}</div>
