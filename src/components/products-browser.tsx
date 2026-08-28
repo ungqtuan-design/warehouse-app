@@ -4,7 +4,7 @@ import { startTransition, useActionState, useEffect, useMemo, useRef, useState }
 import { Check, Pencil } from "lucide-react";
 import { useRouter } from "next/navigation";
 
-import { updateProductInlineAction } from "@/app/actions/warehouse";
+import { fetchProductImageAction, searchProductsAction, updateProductInlineAction } from "@/app/actions/warehouse";
 import { useBasket } from "@/components/basket-provider";
 import { formatNumber } from "@/lib/format";
 
@@ -58,6 +58,8 @@ type ProductsBrowserText = {
   searchPrompt: string;
   noProductMatches: string;
   noProductsRows: string;
+  loadMore: string;
+  searching: string;
   exceedsStockMessage: string;
   addedToBasketMessage: string;
   selectWarehouseForBasket: string;
@@ -87,11 +89,11 @@ function getAvailableQty(product: ProductRow, warehouse: WarehouseFilter) {
 }
 
 export function ProductsBrowser({
-  products,
+  productCount,
   suppliers,
   text,
 }: {
-  products: ProductRow[];
+  productCount: number;
   suppliers: SupplierOption[];
   text: ProductsBrowserText;
 }) {
@@ -101,28 +103,64 @@ export function ProductsBrowser({
   const [warehouse, setWarehouse] = useState<WarehouseFilter>("ALL");
   const [includeInactive, setIncludeInactive] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
+  const [results, setResults] = useState<ProductRow[]>([]);
+  const [hasMore, setHasMore] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [quantities, setQuantities] = useState<Record<string, string>>({});
   const [messages, setMessages] = useState<Record<string, string>>({});
   const [expandedProductId, setExpandedProductId] = useState<string | null>(null);
   const [editMessages, setEditMessages] = useState<Record<string, { kind: "success" | "error"; message: string }>>({});
 
   const supplierOptions = useMemo(() => suppliers, [suppliers]);
-  const results = useMemo(() => {
-    const trimmedQuery = query.trim().toLowerCase();
-    return products.filter((product) => {
-      const matchesSupplier = supplierId === "ALL" || product.supplierId === supplierId;
-      const matchesStatus = includeInactive || product.status === "ACTIVE";
-      const matchesWarehouse = warehouse === "ALL" || getAvailableQty(product, warehouse) > 0;
-      const matchesQuery = trimmedQuery.length === 0
-        ? true
-        : product.name.toLowerCase().includes(trimmedQuery) || product.sku.toLowerCase().includes(trimmedQuery);
 
-      return matchesSupplier && matchesStatus && matchesWarehouse && matchesQuery;
-    });
-  }, [includeInactive, products, query, supplierId, warehouse]);
-
-  function runSearch() {
+  async function runSearch() {
+    setLoading(true);
     setHasSearched(true);
+
+    const page = await searchProductsAction({
+      query,
+      supplierId,
+      warehouse,
+      includeInactive,
+      skip: 0,
+    });
+
+    setResults(page.rows);
+    setHasMore(page.hasMore);
+    setLoading(false);
+  }
+
+  async function loadMore() {
+    setLoading(true);
+
+    const page = await searchProductsAction({
+      query,
+      supplierId,
+      warehouse,
+      includeInactive,
+      skip: results.length,
+    });
+
+    setResults((current) => [...current, ...page.rows]);
+    setHasMore(page.hasMore);
+    setLoading(false);
+  }
+
+  // Re-pulls exactly the rows already on screen (same filters, same count)
+  // after an inline edit, instead of re-running the whole search from
+  // scratch or leaving the edited row stale in local state.
+  async function refreshVisibleResults() {
+    const page = await searchProductsAction({
+      query,
+      supplierId,
+      warehouse,
+      includeInactive,
+      skip: 0,
+      take: Math.max(results.length, 1),
+    });
+
+    setResults(page.rows);
+    setHasMore(page.hasMore);
   }
 
   return (
@@ -149,8 +187,8 @@ export function ProductsBrowser({
           <input type="checkbox" checked={includeInactive} onChange={(event) => setIncludeInactive(event.target.checked)} className="h-4 w-4 rounded border-slate-300" />
           {text.includeInactive}
         </label>
-        <button type="button" onClick={runSearch} className="rounded-xl bg-cyan-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-cyan-500">
-          {text.search}
+        <button type="button" onClick={runSearch} disabled={loading} className="rounded-xl bg-cyan-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-cyan-500 disabled:cursor-not-allowed disabled:bg-slate-300">
+          {loading ? text.searching : text.search}
         </button>
       </div>
 
@@ -160,7 +198,6 @@ export function ProductsBrowser({
             <tr>
               <th className="px-4 py-3 font-medium">SKU</th>
               <th className="px-4 py-3 font-medium">{text.actions}</th>
-              <th className="px-4 py-3 font-medium">{text.image}</th>
               <th className="px-4 py-3 font-medium">{text.product}</th>
               <th className="px-4 py-3 font-medium">{text.supplier}</th>
               <th className="px-4 py-3 font-medium">{text.status}</th>
@@ -176,13 +213,19 @@ export function ProductsBrowser({
           <tbody className="divide-y divide-slate-200 bg-white">
             {!hasSearched ? (
               <tr>
-                <td colSpan={13} className="px-4 py-10 text-center text-sm text-slate-500">
-                  {products.length === 0 ? text.noProductsRows : text.searchPrompt}
+                <td colSpan={12} className="px-4 py-10 text-center text-sm text-slate-500">
+                  {productCount === 0 ? text.noProductsRows : text.searchPrompt}
+                </td>
+              </tr>
+            ) : results.length === 0 && loading ? (
+              <tr>
+                <td colSpan={12} className="px-4 py-10 text-center text-sm text-slate-500">
+                  {text.searching}
                 </td>
               </tr>
             ) : results.length === 0 ? (
               <tr>
-                <td colSpan={13} className="px-4 py-10 text-center text-sm text-slate-500">
+                <td colSpan={12} className="px-4 py-10 text-center text-sm text-slate-500">
                   {text.noProductMatches}
                 </td>
               </tr>
@@ -239,6 +282,7 @@ export function ProductsBrowser({
                     setEditMessages((current) => ({ ...current, [product.id]: { kind, message } }));
                     if (kind === "success") {
                       setExpandedProductId(null);
+                      void refreshVisibleResults();
                     }
                   }}
                 />
@@ -247,6 +291,19 @@ export function ProductsBrowser({
           </tbody>
         </table>
       </div>
+
+      {hasSearched && hasMore ? (
+        <div className="mt-4 flex justify-center">
+          <button
+            type="button"
+            onClick={loadMore}
+            disabled={loading}
+            className="rounded-xl border border-slate-300 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:text-slate-400"
+          >
+            {loading ? text.searching : text.loadMore}
+          </button>
+        </div>
+      ) : null}
     </>
   );
 }
@@ -358,13 +415,6 @@ function ProductTableRows({
           </button>
         </td>
         <td className="px-4 py-3">
-          {product.imageUrl ? (
-            <img src={product.imageUrl} alt={product.name} className="h-12 w-12 rounded-xl border border-slate-200 object-cover" />
-          ) : (
-            <span className="text-xs text-slate-500">{text.noImage}</span>
-          )}
-        </td>
-        <td className="px-4 py-3">
           <div>
             <div className="font-medium text-slate-900">{product.name}</div>
             {editMessage ? (
@@ -422,6 +472,34 @@ function ProductTableRows({
   );
 }
 
+function ProductImagePreview({ productId, productName, noImageLabel }: { productId: string; productName: string; noImageLabel: string }) {
+  const [imageUrl, setImageUrl] = useState<string | null | undefined>(undefined);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    fetchProductImageAction(productId).then((url) => {
+      if (!cancelled) {
+        setImageUrl(url);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [productId]);
+
+  if (imageUrl === undefined) {
+    return <div className="h-16 w-16 animate-pulse rounded-xl border border-slate-200 bg-slate-100" />;
+  }
+
+  if (!imageUrl) {
+    return <span className="text-xs text-slate-500">{noImageLabel}</span>;
+  }
+
+  return <img src={imageUrl} alt={productName} className="h-16 w-16 rounded-xl border border-slate-200 object-cover" />;
+}
+
 function ProductEditInlineRow({
   formId,
   formAction,
@@ -437,7 +515,7 @@ function ProductEditInlineRow({
 }) {
   return (
     <tr className="bg-slate-50">
-      <td colSpan={13} className="px-4 py-4">
+      <td colSpan={12} className="px-4 py-4">
         <form id={formId} action={formAction} className="grid gap-4 lg:grid-cols-2">
           <input type="hidden" name="productId" value={product.id} />
           <label className="grid gap-2 text-sm font-medium text-slate-700">
@@ -456,6 +534,10 @@ function ProductEditInlineRow({
               ))}
             </select>
           </label>
+          <div className="grid gap-2 text-sm font-medium text-slate-700 lg:col-span-2">
+            {text.image}
+            <ProductImagePreview productId={product.id} productName={product.name} noImageLabel={text.noImage} />
+          </div>
           <label className="grid gap-2 text-sm font-medium text-slate-700 lg:col-span-2">
             {text.productImageUpload}
             <input name="imageFile" type="file" accept="image/*" className="rounded-xl border border-slate-300 px-4 py-3 outline-none transition file:mr-4 file:rounded-full file:border-0 file:bg-slate-900 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white" />

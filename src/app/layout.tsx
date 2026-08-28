@@ -7,7 +7,6 @@ import { logoutAction } from "@/app/actions/auth";
 import { BasketProvider } from "@/components/basket-provider";
 import { InventoryBasketCount } from "@/components/inventory-basket-count";
 import { PreferenceToggles } from "@/components/preference-toggles";
-import { RoutePrefetcher } from "@/components/route-prefetcher";
 import { getCurrentUser } from "@/lib/auth";
 import { getUiContext } from "@/lib/ui";
 
@@ -71,7 +70,6 @@ export default async function RootLayout({
                 <Link
                   key={href}
                   href={href}
-                  prefetch
                   className="flex min-w-[140px] flex-none items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium text-slate-200 transition hover:bg-slate-900 hover:text-white lg:min-w-0"
                 >
                   <Icon className="h-4 w-4 text-cyan-300" />
@@ -82,7 +80,6 @@ export default async function RootLayout({
             </nav>
           </aside>
           <div className="flex min-h-screen min-w-0 flex-col">
-            <RoutePrefetcher routes={navigation.map((item) => item.href)} />
             <header className="app-header border-b border-slate-200 bg-white px-4 py-4 shadow-sm sm:px-6">
               <div className="flex justify-end">
                 <div className="flex flex-wrap items-center justify-end gap-3">

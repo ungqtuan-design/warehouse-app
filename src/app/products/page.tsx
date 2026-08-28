@@ -4,12 +4,12 @@ import { ProductCreateForm } from "@/components/product-create-form";
 import { ProductsBrowser } from "@/components/products-browser";
 import { requireUser } from "@/lib/auth";
 import { getUiContext } from "@/lib/ui";
-import { getProductRows, getSuppliers } from "@/lib/warehouse-data";
+import { getProductCount, getSuppliers } from "@/lib/warehouse-data";
 
 export default async function ProductsPage() {
   await requireUser();
 
-  const [products, suppliers, { text }] = await Promise.all([getProductRows(), getSuppliers(), getUiContext()]);
+  const [productCount, suppliers, { text }] = await Promise.all([getProductCount(), getSuppliers(), getUiContext()]);
 
   return (
     <div className="grid gap-6">
@@ -22,7 +22,7 @@ export default async function ProductsPage() {
         </div>
 
         <div className="mt-5">
-          <ProductsBrowser products={products} suppliers={suppliers.map((supplier) => ({ id: supplier.id, name: supplier.name }))} text={text} />
+          <ProductsBrowser productCount={productCount} suppliers={suppliers.map((supplier) => ({ id: supplier.id, name: supplier.name }))} text={text} />
         </div>
       </section>
 

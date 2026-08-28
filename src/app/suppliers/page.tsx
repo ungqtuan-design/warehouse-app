@@ -4,16 +4,16 @@ import { SupplierCreateForm, SupplierUpdateForm } from "@/components/supplier-fo
 import { SuppliersWorkspace } from "@/components/suppliers-workspace";
 import { requireUser } from "@/lib/auth";
 import { getUiContext } from "@/lib/ui";
-import { getSuppliers } from "@/lib/warehouse-data";
+import { getSupplierCount } from "@/lib/warehouse-data";
 
 export default async function SuppliersPage() {
   await requireUser();
 
-  const [suppliers, { text }] = await Promise.all([getSuppliers(), getUiContext()]);
+  const [supplierCount, { text }] = await Promise.all([getSupplierCount(), getUiContext()]);
 
   return (
     <div className="grid gap-6">
-      <SuppliersWorkspace suppliers={suppliers} text={text} />
+      <SuppliersWorkspace supplierCount={supplierCount} text={text} />
 
       <details className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <summary className="flex cursor-pointer list-none flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

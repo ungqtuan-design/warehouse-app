@@ -116,7 +116,7 @@ export function SupplierCreateForm({ text }: { text: SupplierText }) {
   );
 }
 
-export function SupplierUpdateForm({ supplier, text }: { supplier: SupplierRow; text: SupplierText }) {
+export function SupplierUpdateForm({ supplier, text, onUpdated }: { supplier: SupplierRow; text: SupplierText; onUpdated?: () => void }) {
   const router = useRouter();
   const [notice, setNotice] = useState<ActionNotice>(null);
   const [state, formAction, pending] = useActionState(updateSupplierAction, idleFormActionState);
@@ -124,6 +124,7 @@ export function SupplierUpdateForm({ supplier, text }: { supplier: SupplierRow; 
   useEffect(() => {
     if (state.status === "success") {
       router.refresh();
+      onUpdated?.();
       setNotice({ kind: "success", message: text.supplierUpdateSuccess });
       return;
     }
@@ -131,7 +132,7 @@ export function SupplierUpdateForm({ supplier, text }: { supplier: SupplierRow; 
     if (state.status === "error") {
       setNotice({ kind: "error", message: text.supplierUpdateError });
     }
-  }, [router, state.status, text.supplierUpdateError, text.supplierUpdateSuccess]);
+  }, [onUpdated, router, state.status, text.supplierUpdateError, text.supplierUpdateSuccess]);
 
   return (
     <>

@@ -10,6 +10,12 @@ import { resizeUploadedImage } from "@/lib/image";
 import { requireAdmin, requireUser } from "@/lib/auth";
 import { hashPassword } from "@/lib/password";
 import { prisma } from "@/lib/prisma";
+import {
+  searchProductRows,
+  searchSuppliers,
+  type ProductSearchParams,
+  type SupplierSearchParams,
+} from "@/lib/warehouse-data";
 
 const supplierSchema = z.object({
   name: z.string().trim().min(1),
@@ -199,6 +205,33 @@ export async function createProductAction(
     status: "success",
     message: "product-created",
   };
+}
+
+export async function searchProductsAction(params: ProductSearchParams) {
+  await requireUser();
+
+  return searchProductRows(params);
+}
+
+export async function searchSuppliersAction(params: SupplierSearchParams) {
+  await requireUser();
+
+  return searchSuppliers(params);
+}
+
+export async function fetchProductImageAction(productId: string) {
+  await requireUser();
+
+  const product = await prisma.product.findUnique({
+    where: {
+      id: productId,
+    },
+    select: {
+      imageUrl: true,
+    },
+  });
+
+  return product?.imageUrl ?? null;
 }
 
 export async function updateProductInlineAction(

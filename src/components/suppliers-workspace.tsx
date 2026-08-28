@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 
+import { searchSuppliersAction } from "@/app/actions/warehouse";
 import { SupplierUpdateForm } from "@/components/supplier-forms";
 
 type SupplierRow = {
@@ -38,6 +39,8 @@ type SuppliersWorkspaceText = {
   searchSupplierContactEmailAddress: string;
   searchSupplierPrompt: string;
   noSupplierMatches: string;
+  loadMore: string;
+  searching: string;
   enterSupplierName: string;
   contactPersonPlaceholder: string;
   phoneNumberPlaceholder: string;
@@ -59,39 +62,59 @@ type SuppliersWorkspaceText = {
 };
 
 export function SuppliersWorkspace({
-  suppliers,
+  supplierCount,
   text,
 }: {
-  suppliers: SupplierRow[];
+  supplierCount: number;
   text: SuppliersWorkspaceText;
 }) {
   const [queryInput, setQueryInput] = useState("");
-  const [query, setQuery] = useState("");
   const [includeInactive, setIncludeInactive] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
+  const [results, setResults] = useState<SupplierRow[]>([]);
+  const [hasMore, setHasMore] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  const results = useMemo(() => {
-    const normalizedQuery = query.trim().toLowerCase();
+  async function runSearch() {
+    setLoading(true);
+    setHasSearched(true);
 
-    return suppliers.filter((supplier) => {
-      const matchesStatus = includeInactive || supplier.isActive;
-
-      if (!matchesStatus) {
-        return false;
-      }
-
-      if (normalizedQuery.length === 0) {
-        return true;
-      }
-
-      const haystack = [supplier.name, supplier.contactName, supplier.email, supplier.address]
-        .filter(Boolean)
-        .join(" ")
-        .toLowerCase();
-
-      return haystack.includes(normalizedQuery);
+    const page = await searchSuppliersAction({
+      query: queryInput,
+      includeInactive,
+      skip: 0,
     });
-  }, [includeInactive, query, suppliers]);
+
+    setResults(page.rows);
+    setHasMore(page.hasMore);
+    setLoading(false);
+  }
+
+  async function loadMore() {
+    setLoading(true);
+
+    const page = await searchSuppliersAction({
+      query: queryInput,
+      includeInactive,
+      skip: results.length,
+    });
+
+    setResults((current) => [...current, ...page.rows]);
+    setHasMore(page.hasMore);
+    setLoading(false);
+  }
+
+  async function refreshVisibleResults() {
+    const page = await searchSuppliersAction({
+      query: queryInput,
+      includeInactive,
+      skip: 0,
+      take: Math.max(results.length, 1),
+    });
+
+    setResults(page.rows);
+    setHasMore(page.hasMore);
+  }
 
   return (
     <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -117,11 +140,8 @@ export function SuppliersWorkspace({
             <input type="checkbox" checked={includeInactive} onChange={(event) => setIncludeInactive(event.target.checked)} className="h-4 w-4 rounded border-slate-300" />
             {text.includeInactive}
           </label>
-          <button type="button" onClick={() => {
-            setHasSearched(true);
-            setQuery(queryInput);
-          }} className="rounded-xl bg-cyan-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-cyan-500">
-            {text.search}
+          <button type="button" onClick={runSearch} disabled={loading} className="rounded-xl bg-cyan-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-cyan-500 disabled:cursor-not-allowed disabled:bg-slate-300">
+            {loading ? text.searching : text.search}
           </button>
         </div>
 
@@ -138,16 +158,16 @@ export function SuppliersWorkspace({
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 bg-white">
-              {suppliers.length === 0 ? (
+              {!hasSearched ? (
                 <tr>
                   <td colSpan={6} className="px-4 py-10 text-center text-sm text-slate-500">
-                    {text.noSuppliersRows}
+                    {supplierCount === 0 ? text.noSuppliersRows : text.searchSupplierPrompt}
                   </td>
                 </tr>
-              ) : !hasSearched ? (
+              ) : results.length === 0 && loading ? (
                 <tr>
                   <td colSpan={6} className="px-4 py-10 text-center text-sm text-slate-500">
-                    {text.searchSupplierPrompt}
+                    {text.searching}
                   </td>
                 </tr>
               ) : results.length === 0 ? (
@@ -177,7 +197,7 @@ export function SuppliersWorkspace({
                           {text.update}
                         </span>
                       </summary>
-                      <SupplierUpdateForm supplier={supplier} text={text} />
+                      <SupplierUpdateForm supplier={supplier} text={text} onUpdated={refreshVisibleResults} />
                     </details>
                   </td>
                 </tr>
@@ -185,6 +205,19 @@ export function SuppliersWorkspace({
             </tbody>
           </table>
         </div>
+
+        {hasSearched && hasMore ? (
+          <div className="mt-4 flex justify-center">
+            <button
+              type="button"
+              onClick={loadMore}
+              disabled={loading}
+              className="rounded-xl border border-slate-300 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:text-slate-400"
+            >
+              {loading ? text.searching : text.loadMore}
+            </button>
+          </div>
+        ) : null}
       </div>
     </section>
   );

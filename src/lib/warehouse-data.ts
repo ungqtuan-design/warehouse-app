@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
+export const LIST_PAGE_SIZE = 50;
 
 type DashboardRiskLevel = "red" | "yellow" | "normal";
 
@@ -126,6 +127,127 @@ export async function getProductInventoryRows() {
 
     return mapProductRow({ ...product, imageUrl: null }, outbound7d, outbound30d);
   });
+}
+
+export type ProductSearchParams = {
+  query?: string;
+  supplierId?: string;
+  warehouse?: "ALL" | "KHO_TONG" | "KHO_LE";
+  includeInactive?: boolean;
+  skip?: number;
+  take?: number;
+};
+
+export async function getProductCount() {
+  return prisma.product.count();
+}
+
+// Server-side search + pagination: only the requested page of rows (and
+// never the product photo) crosses the wire to Neon, instead of the whole
+// catalog on every keystroke or page load.
+export async function searchProductRows(params: ProductSearchParams) {
+  const {
+    query = "",
+    supplierId,
+    warehouse = "ALL",
+    includeInactive = false,
+    skip = 0,
+    take = LIST_PAGE_SIZE,
+  } = params;
+
+  const trimmedQuery = query.trim();
+  const since30d = new Date(Date.now() - THIRTY_DAYS_MS);
+  const since7d = new Date(Date.now() - SEVEN_DAYS_MS);
+
+  const where: Prisma.ProductWhereInput = {
+    ...(includeInactive ? {} : { status: "ACTIVE" }),
+    ...(supplierId && supplierId !== "ALL" ? { supplierId } : {}),
+    ...(trimmedQuery
+      ? {
+          OR: [
+            { name: { contains: trimmedQuery, mode: "insensitive" } },
+            { sku: { contains: trimmedQuery, mode: "insensitive" } },
+          ],
+        }
+      : {}),
+    ...(warehouse !== "ALL"
+      ? {
+          inventoryBalances: {
+            some: {
+              quantity: { gt: 0 },
+              location: { code: warehouse },
+            },
+          },
+        }
+      : {}),
+  };
+
+  const [products, total] = await Promise.all([
+    prisma.product.findMany({
+      where,
+      select: {
+        ...productListSelect,
+        inventoryTransactions: {
+          where: { type: TransactionType.CUSTOMER_OUT, createdAt: { gte: since30d } },
+          select: { quantity: true, createdAt: true },
+        },
+      },
+      orderBy: [{ name: "asc" }],
+      skip,
+      take,
+    }),
+    prisma.product.count({ where }),
+  ]);
+
+  const rows = products.map((product) => {
+    const { outbound7d, outbound30d } = splitOutboundStats(product.inventoryTransactions, since7d);
+
+    return mapProductRow({ ...product, imageUrl: null }, outbound7d, outbound30d);
+  });
+
+  return { rows, total, hasMore: skip + rows.length < total };
+}
+
+export type SupplierSearchParams = {
+  query?: string;
+  includeInactive?: boolean;
+  skip?: number;
+  take?: number;
+};
+
+export async function getSupplierCount() {
+  return prisma.supplier.count();
+}
+
+export async function searchSuppliers(params: SupplierSearchParams) {
+  const { query = "", includeInactive = false, skip = 0, take = LIST_PAGE_SIZE } = params;
+  const trimmedQuery = query.trim();
+
+  const where: Prisma.SupplierWhereInput = {
+    ...(includeInactive ? {} : { isActive: true }),
+    ...(trimmedQuery
+      ? {
+          OR: [
+            { name: { contains: trimmedQuery, mode: "insensitive" } },
+            { contactName: { contains: trimmedQuery, mode: "insensitive" } },
+            { email: { contains: trimmedQuery, mode: "insensitive" } },
+            { address: { contains: trimmedQuery, mode: "insensitive" } },
+          ],
+        }
+      : {}),
+  };
+
+  const [rows, total] = await Promise.all([
+    prisma.supplier.findMany({
+      where,
+      orderBy: [{ isActive: "desc" }, { name: "asc" }],
+      skip,
+      take,
+    }),
+    prisma.supplier.count({ where }),
+  ]);
+
+  return { rows, total, hasMore: skip + rows.length < total };
 }
 
 export async function getDashboardData() {
