@@ -146,64 +146,56 @@ export function SuppliersWorkspace({
         </div>
 
         <div className="mt-5 overflow-x-auto rounded-2xl border border-slate-200">
-          <table className="min-w-[760px] divide-y divide-slate-200 text-left text-sm lg:min-w-full">
-            <thead className="bg-slate-50 text-slate-500">
-              <tr>
-                <th className="px-4 py-3 font-medium">{text.supplier}</th>
-                <th className="px-4 py-3 font-medium">{text.contact}</th>
-                <th className="px-4 py-3 font-medium">{text.email}</th>
-                <th className="px-4 py-3 font-medium">{text.phone}</th>
-                <th className="px-4 py-3 font-medium">{text.status}</th>
-                <th className="px-4 py-3 font-medium">{text.actions}</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-200 bg-white">
+          {/* Header and rows share the exact same grid-cols template (not a
+              <table>) so columns always line up — the header row has no
+              per-row cells to size against since each data row is a single
+              colspan-style <details> hosting its own inline edit form. */}
+          <div className="min-w-[760px] divide-y divide-slate-200 text-left text-sm lg:min-w-full">
+            <div className="grid grid-cols-[1.5fr_1fr_1fr_1fr_1fr_auto] gap-4 bg-slate-50 px-4 py-3 font-medium text-slate-500">
+              <span>{text.supplier}</span>
+              <span>{text.contact}</span>
+              <span>{text.email}</span>
+              <span>{text.phone}</span>
+              <span>{text.status}</span>
+              <span>{text.actions}</span>
+            </div>
+            <div className="divide-y divide-slate-200 bg-white">
               {!hasSearched ? (
-                <tr>
-                  <td colSpan={6} className="px-4 py-10 text-center text-sm text-slate-500">
-                    {supplierCount === 0 ? text.noSuppliersRows : text.searchSupplierPrompt}
-                  </td>
-                </tr>
+                <div className="px-4 py-10 text-center text-sm text-slate-500">
+                  {supplierCount === 0 ? text.noSuppliersRows : text.searchSupplierPrompt}
+                </div>
               ) : results.length === 0 && loading ? (
-                <tr>
-                  <td colSpan={6} className="px-4 py-10 text-center text-sm text-slate-500">
-                    {text.searching}
-                  </td>
-                </tr>
+                <div className="px-4 py-10 text-center text-sm text-slate-500">
+                  {text.searching}
+                </div>
               ) : results.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="px-4 py-10 text-center text-sm text-slate-500">
-                    {text.noSupplierMatches}
-                  </td>
-                </tr>
+                <div className="px-4 py-10 text-center text-sm text-slate-500">
+                  {text.noSupplierMatches}
+                </div>
               ) : results.map((supplier) => (
-                <tr key={supplier.id}>
-                  <td colSpan={6} className="px-0 py-0">
-                    <details className="group">
-                      <summary className="grid cursor-pointer grid-cols-[1.5fr_1fr_1fr_1fr_1fr_auto] items-start gap-4 px-4 py-3">
-                        <div>
-                          <div className="font-medium text-slate-900">{supplier.name}</div>
-                          <div className="text-xs text-slate-500">{supplier.address}</div>
-                        </div>
-                        <div className="text-slate-600">{supplier.contactName}</div>
-                        <div className="text-slate-600">{supplier.email}</div>
-                        <div className="text-slate-600">{supplier.phone}</div>
-                        <div>
-                          <span className={`rounded-full px-3 py-1 text-xs font-semibold ${supplier.isActive ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-600"}`}>
-                            {supplier.isActive ? text.active : text.inactive}
-                          </span>
-                        </div>
-                        <span className="inline-flex rounded-full border border-slate-300 px-3 py-1 text-xs font-semibold text-slate-700 transition group-hover:bg-slate-50">
-                          {text.update}
-                        </span>
-                      </summary>
-                      <SupplierUpdateForm supplier={supplier} text={text} onUpdated={refreshVisibleResults} />
-                    </details>
-                  </td>
-                </tr>
+                <details key={supplier.id} className="group">
+                  <summary className="grid cursor-pointer grid-cols-[1.5fr_1fr_1fr_1fr_1fr_auto] items-start gap-4 px-4 py-3">
+                    <div>
+                      <div className="font-medium text-slate-900">{supplier.name}</div>
+                      <div className="text-xs text-slate-500">{supplier.address}</div>
+                    </div>
+                    <div className="text-slate-600">{supplier.contactName}</div>
+                    <div className="text-slate-600">{supplier.email}</div>
+                    <div className="text-slate-600">{supplier.phone}</div>
+                    <div>
+                      <span className={`rounded-full px-3 py-1 text-xs font-semibold ${supplier.isActive ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-600"}`}>
+                        {supplier.isActive ? text.active : text.inactive}
+                      </span>
+                    </div>
+                    <span className="inline-flex rounded-full border border-slate-300 px-3 py-1 text-xs font-semibold text-slate-700 transition group-hover:bg-slate-50">
+                      {text.update}
+                    </span>
+                  </summary>
+                  <SupplierUpdateForm supplier={supplier} text={text} onUpdated={refreshVisibleResults} />
+                </details>
               ))}
-            </tbody>
-          </table>
+            </div>
+          </div>
         </div>
 
         {hasSearched && hasMore ? (
