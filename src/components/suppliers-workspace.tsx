@@ -180,7 +180,7 @@ export function SuppliersWorkspace({
                 <tr key={supplier.id}>
                   <td colSpan={6} className="px-0 py-0">
                     <details className="group">
-                      <summary className="grid cursor-pointer grid-cols-[1.5fr_1fr_1fr_1fr_1fr_auto] items-center gap-4 px-4 py-3">
+                      <summary className="grid cursor-pointer grid-cols-[1.5fr_1fr_1fr_1fr_1fr_auto] items-start gap-4 px-4 py-3">
                         <div>
                           <div className="font-medium text-slate-900">{supplier.name}</div>
                           <div className="text-xs text-slate-500">{supplier.address}</div>
