@@ -6,7 +6,6 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import type { FormActionState } from "@/lib/action-state";
-import { resizeUploadedImage } from "@/lib/image";
 import { requireAdmin, requireUser } from "@/lib/auth";
 import { hashPassword } from "@/lib/password";
 import { prisma } from "@/lib/prisma";
@@ -146,24 +145,6 @@ export async function createProductAction(
 ): Promise<FormActionState> {
   await requireUser();
 
-  const imageEntry = formData.get("imageFile");
-  let imageDataUrl: string | null = null;
-
-  if (imageEntry instanceof File && imageEntry.size > 0) {
-    if (!imageEntry.type.startsWith("image/")) {
-      return {
-        status: "error",
-        message: "invalid-image",
-      };
-    }
-
-    try {
-      imageDataUrl = await resizeUploadedImage(imageEntry);
-    } catch {
-      return { status: "error", message: "invalid-image" };
-    }
-  }
-
   try {
     const parsed = productSchema.parse({
       name: String(formData.get("name") ?? ""),
@@ -180,7 +161,6 @@ export async function createProductAction(
         sku: parsed.sku,
         name: parsed.name,
         supplierId: parsed.supplierId,
-        imageUrl: imageDataUrl,
         costPrice: parsed.costPrice,
         leadTimeDays: parsed.leadTimeDays,
         status: parsed.isActive ? "ACTIVE" : "INACTIVE",
@@ -224,44 +204,11 @@ export async function searchSuppliersAction(params: SupplierSearchParams) {
   return searchSuppliers(params);
 }
 
-export async function fetchProductImageAction(productId: string) {
-  await requireUser();
-
-  const product = await prisma.product.findUnique({
-    where: {
-      id: productId,
-    },
-    select: {
-      imageUrl: true,
-    },
-  });
-
-  return product?.imageUrl ?? null;
-}
-
 export async function updateProductInlineAction(
   _previousState: ProductUpdateInlineState,
   formData: FormData,
 ): Promise<ProductUpdateInlineState> {
   await requireUser();
-
-  const imageEntry = formData.get("imageFile");
-  let imageDataUrl: string | null | undefined;
-
-  if (imageEntry instanceof File && imageEntry.size > 0) {
-    if (!imageEntry.type.startsWith("image/")) {
-      return {
-        status: "error" as const,
-        message: "Invalid image file.",
-      };
-    }
-
-    try {
-      imageDataUrl = await resizeUploadedImage(imageEntry);
-    } catch {
-      return { status: "error", message: "Invalid image file." };
-    }
-  }
 
   try {
     const parsed = updateProductSchema.parse({
@@ -286,7 +233,6 @@ export async function updateProductInlineAction(
         costPrice: parsed.costPrice,
         leadTimeDays: parsed.leadTimeDays,
         status: parsed.isActive ? "ACTIVE" : "INACTIVE",
-        ...(imageDataUrl === undefined ? {} : { imageUrl: imageDataUrl }),
       },
     });
   } catch (error) {

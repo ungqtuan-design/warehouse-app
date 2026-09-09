@@ -45,7 +45,7 @@ const productListSelect = {
   inventoryBalances: { select: { quantity: true, location: { select: { code: true } } } },
 } satisfies Prisma.ProductSelect;
 
-function mapProductRow<T extends Prisma.ProductGetPayload<{ select: typeof productListSelect }> & { imageUrl: string | null }>(
+function mapProductRow<T extends Prisma.ProductGetPayload<{ select: typeof productListSelect }>>(
   product: T,
   outbound7d: number,
   outbound30d: number,
@@ -57,7 +57,6 @@ function mapProductRow<T extends Prisma.ProductGetPayload<{ select: typeof produ
     id: product.id,
     sku: product.sku,
     name: product.name,
-    imageUrl: product.imageUrl,
     costPrice: Number(product.costPrice),
     leadTimeDays: product.leadTimeDays,
     supplierId: product.supplierId,
@@ -104,7 +103,7 @@ export async function getProductInventoryRows() {
   return products.map((product) => {
     const { outbound7d, outbound30d } = stats.get(product.id) ?? { outbound7d: 0, outbound30d: 0 };
 
-    return mapProductRow({ ...product, imageUrl: null }, outbound7d, outbound30d);
+    return mapProductRow(product, outbound7d, outbound30d);
   });
 }
 
@@ -174,7 +173,7 @@ export async function searchProductRows(params: ProductSearchParams) {
   const rows = products.map((product) => {
     const { outbound7d, outbound30d } = stats.get(product.id) ?? { outbound7d: 0, outbound30d: 0 };
 
-    return mapProductRow({ ...product, imageUrl: null }, outbound7d, outbound30d);
+    return mapProductRow(product, outbound7d, outbound30d);
   });
 
   return { rows, total, hasMore: skip + rows.length < total };

@@ -12,7 +12,6 @@ type ProductCreateText = {
   sku: string;
   costPrice: string;
   supplier: string;
-  productImageUpload: string;
   leadTimeDays: string;
   active: string;
   enterProductName: string;
@@ -21,7 +20,6 @@ type ProductCreateText = {
   selectSupplier: string;
   submit: string;
   submitting: string;
-  invalidImageMessage: string;
   productCreateSuccess: string;
   productCreateError: string;
   productSkuTaken: string;
@@ -54,9 +52,7 @@ export function ProductCreateForm({
 
     if (state.status === "error") {
       const message =
-        state.message === "invalid-image"
-          ? text.invalidImageMessage
-          : state.message === "product-sku-taken"
+        state.message === "product-sku-taken"
             ? text.productSkuTaken
             : text.productCreateError;
 
@@ -66,7 +62,6 @@ export function ProductCreateForm({
     router,
     state.message,
     state.status,
-    text.invalidImageMessage,
     text.productCreateError,
     text.productCreateSuccess,
     text.productSkuTaken,
@@ -91,10 +86,6 @@ export function ProductCreateForm({
               <option key={supplier.id} value={supplier.id}>{supplier.name}</option>
             ))}
           </select>
-        </label>
-        <label className="grid gap-2 text-sm font-medium text-slate-700 lg:col-span-2">
-          {text.productImageUpload}
-          <input name="imageFile" type="file" accept="image/*" className="rounded-xl border border-slate-300 px-4 py-3 outline-none transition file:mr-4 file:rounded-full file:border-0 file:bg-slate-900 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white" />
         </label>
         <label className="grid gap-2 text-sm font-medium text-slate-700">
           {text.costPrice}

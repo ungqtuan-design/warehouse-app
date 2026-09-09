@@ -77,7 +77,6 @@ model Product {
   id                    String                 @id @default(cuid())
   sku                   String                 @unique
   name                  String
-  imageUrl              String?
   costPrice             Decimal                @default(0) @db.Decimal(14, 2)
   leadTimeDays          Int                    @default(0)
   status                ProductStatus          @default(ACTIVE)

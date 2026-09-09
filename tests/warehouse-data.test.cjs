@@ -40,7 +40,7 @@ test('inventory preserves balances, converts SQL bigint and defaults missing sal
   assert.equal(rows[0].outbound7d, 3);
   assert.equal(rows[0].outbound30d, 12);
   assert.equal(rows[1].outbound30d, 0);
-  assert.equal(rows[1].imageUrl, null);
+  assert.equal(Object.hasOwn(rows[1], 'imageUrl'), false);
   assert.match(query.text, /GROUP BY/);
   assert.ok(query.values.includes('sold'));
   assert.ok(!query.text.includes('sold'));

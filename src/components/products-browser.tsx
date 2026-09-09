@@ -4,7 +4,7 @@ import { startTransition, useActionState, useEffect, useMemo, useRef, useState }
 import { Check, Pencil } from "lucide-react";
 import { useRouter } from "next/navigation";
 
-import { fetchProductImageAction, searchProductsAction, updateProductInlineAction } from "@/app/actions/warehouse";
+import { searchProductsAction, updateProductInlineAction } from "@/app/actions/warehouse";
 import { useBasket } from "@/components/basket-provider";
 import { formatNumber } from "@/lib/format";
 
@@ -12,7 +12,6 @@ type ProductRow = {
   id: string;
   sku: string;
   name: string;
-  imageUrl: string | null;
   costPrice: number;
   leadTimeDays: number;
   supplierId: string;
@@ -32,8 +31,6 @@ type SupplierOption = {
 
 type ProductsBrowserText = {
   searchProductOrSku: string;
-  image: string;
-  noImage: string;
   allSuppliers: string;
   actions: string;
   includeInactive: string;
@@ -67,8 +64,6 @@ type ProductsBrowserText = {
   updateProduct: string;
   updateProductSuccess: string;
   updateProductError: string;
-  invalidImageMessage: string;
-  productImageUpload: string;
   sku: string;
   enterSku: string;
   productSkuTaken: string;
@@ -369,9 +364,7 @@ function ProductTableRows({
 
     if (state.status === "error") {
       const message =
-        state.message === "Invalid image file."
-          ? text.invalidImageMessage
-          : state.message === "product-sku-taken"
+        state.message === "product-sku-taken"
             ? text.productSkuTaken
             : text.updateProductError;
       onEditResult("error", message);
@@ -381,7 +374,6 @@ function ProductTableRows({
     router,
     state.message,
     state.status,
-    text.invalidImageMessage,
     text.productSkuTaken,
     text.updateProductError,
     text.updateProductSuccess,
@@ -472,34 +464,6 @@ function ProductTableRows({
   );
 }
 
-function ProductImagePreview({ productId, productName, noImageLabel }: { productId: string; productName: string; noImageLabel: string }) {
-  const [imageUrl, setImageUrl] = useState<string | null | undefined>(undefined);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    fetchProductImageAction(productId).then((url) => {
-      if (!cancelled) {
-        setImageUrl(url);
-      }
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [productId]);
-
-  if (imageUrl === undefined) {
-    return <div className="h-16 w-16 animate-pulse rounded-xl border border-slate-200 bg-slate-100" />;
-  }
-
-  if (!imageUrl) {
-    return <span className="text-xs text-slate-500">{noImageLabel}</span>;
-  }
-
-  return <img src={imageUrl} alt={productName} className="h-16 w-16 rounded-xl border border-slate-200 object-cover" />;
-}
-
 function ProductEditInlineRow({
   formId,
   formAction,
@@ -533,14 +497,6 @@ function ProductEditInlineRow({
                 <option key={supplier.id} value={supplier.id}>{supplier.name}</option>
               ))}
             </select>
-          </label>
-          <div className="grid gap-2 text-sm font-medium text-slate-700 lg:col-span-2">
-            {text.image}
-            <ProductImagePreview productId={product.id} productName={product.name} noImageLabel={text.noImage} />
-          </div>
-          <label className="grid gap-2 text-sm font-medium text-slate-700 lg:col-span-2">
-            {text.productImageUpload}
-            <input name="imageFile" type="file" accept="image/*" className="rounded-xl border border-slate-300 px-4 py-3 outline-none transition file:mr-4 file:rounded-full file:border-0 file:bg-slate-900 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white" />
           </label>
           <label className="grid gap-2 text-sm font-medium text-slate-700">
             {text.costPrice}
