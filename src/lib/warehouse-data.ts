@@ -71,59 +71,38 @@ function mapProductRow<T extends Prisma.ProductGetPayload<{ select: typeof produ
   };
 }
 
-function splitOutboundStats(transactions: { quantity: number; createdAt: Date }[], since7d: Date) {
-  const outbound30d = transactions.reduce((sum, transaction) => sum + transaction.quantity, 0);
-  const outbound7d = transactions
-    .filter((transaction) => transaction.createdAt >= since7d)
-    .reduce((sum, transaction) => sum + transaction.quantity, 0);
-
-  return { outbound7d, outbound30d };
-}
-
-// Includes the product photo (base64). Only call this where the photo is
-// actually rendered (the catalog page) — Neon bills by data transferred, and
-// this field is large enough to matter.
-export async function getProductRows() {
+// Aggregate in Postgres: return at most one small row per product, never
+// individual transactions or image data. Parameters remain bound by Prisma.
+async function getOutboundStats(productIds: string[]) {
+  if (productIds.length === 0) return new Map<string, { outbound7d: number; outbound30d: number }>();
   const since30d = new Date(Date.now() - THIRTY_DAYS_MS);
   const since7d = new Date(Date.now() - SEVEN_DAYS_MS);
-  const products = await prisma.product.findMany({
-    select: {
-      ...productListSelect,
-      imageUrl: true,
-      inventoryTransactions: {
-        where: { type: TransactionType.CUSTOMER_OUT, createdAt: { gte: since30d } },
-        select: { quantity: true, createdAt: true },
-      },
-    },
-    orderBy: [{ name: "asc" }],
-  });
-
-  return products.map((product) => {
-    const { outbound7d, outbound30d } = splitOutboundStats(product.inventoryTransactions, since7d);
-
-    return mapProductRow(product, outbound7d, outbound30d);
-  });
+  const stats = await prisma.$queryRaw<{ productId: string; outbound7d: bigint; outbound30d: bigint }[]>(Prisma.sql`
+    SELECT "productId",
+      COALESCE(SUM(quantity) FILTER (WHERE "createdAt" >= ${since7d}), 0) AS "outbound7d",
+      COALESCE(SUM(quantity), 0) AS "outbound30d"
+    FROM "InventoryTransaction"
+    WHERE type = 'CUSTOMER_OUT' AND "createdAt" >= ${since30d}
+      AND "productId" IN (${Prisma.join(productIds)})
+    GROUP BY "productId"
+  `);
+  return new Map(stats.map((row) => [row.productId, {
+    outbound7d: Number(row.outbound7d), outbound30d: Number(row.outbound30d),
+  }]));
 }
 
 // Same rows, without the product photo. Use this for anything that doesn't
 // display images (dashboard, inventory page, CSV exports) so those requests
 // don't drag every product's photo across the network for nothing.
 export async function getProductInventoryRows() {
-  const since30d = new Date(Date.now() - THIRTY_DAYS_MS);
-  const since7d = new Date(Date.now() - SEVEN_DAYS_MS);
   const products = await prisma.product.findMany({
-    select: {
-      ...productListSelect,
-      inventoryTransactions: {
-        where: { type: TransactionType.CUSTOMER_OUT, createdAt: { gte: since30d } },
-        select: { quantity: true, createdAt: true },
-      },
-    },
+    select: productListSelect,
     orderBy: [{ name: "asc" }],
   });
+  const stats = await getOutboundStats(products.map((product) => product.id));
 
   return products.map((product) => {
-    const { outbound7d, outbound30d } = splitOutboundStats(product.inventoryTransactions, since7d);
+    const { outbound7d, outbound30d } = stats.get(product.id) ?? { outbound7d: 0, outbound30d: 0 };
 
     return mapProductRow({ ...product, imageUrl: null }, outbound7d, outbound30d);
   });
@@ -156,8 +135,6 @@ export async function searchProductRows(params: ProductSearchParams) {
   } = params;
 
   const trimmedQuery = query.trim();
-  const since30d = new Date(Date.now() - THIRTY_DAYS_MS);
-  const since7d = new Date(Date.now() - SEVEN_DAYS_MS);
 
   const where: Prisma.ProductWhereInput = {
     ...(includeInactive ? {} : { status: "ACTIVE" }),
@@ -185,22 +162,17 @@ export async function searchProductRows(params: ProductSearchParams) {
   const [products, total] = await Promise.all([
     prisma.product.findMany({
       where,
-      select: {
-        ...productListSelect,
-        inventoryTransactions: {
-          where: { type: TransactionType.CUSTOMER_OUT, createdAt: { gte: since30d } },
-          select: { quantity: true, createdAt: true },
-        },
-      },
-      orderBy: [{ name: "asc" }],
+      select: productListSelect,
+      orderBy: [{ name: "asc" }, { id: "asc" }],
       skip,
       take,
     }),
     prisma.product.count({ where }),
   ]);
 
+  const stats = await getOutboundStats(products.map((product) => product.id));
   const rows = products.map((product) => {
-    const { outbound7d, outbound30d } = splitOutboundStats(product.inventoryTransactions, since7d);
+    const { outbound7d, outbound30d } = stats.get(product.id) ?? { outbound7d: 0, outbound30d: 0 };
 
     return mapProductRow({ ...product, imageUrl: null }, outbound7d, outbound30d);
   });
@@ -466,4 +438,11 @@ export async function getInventoryExportRows() {
     kho_tong_name: getLocationName("KHO_TONG"),
     kho_le_name: getLocationName("KHO_LE"),
   }));
+}
+
+export async function getSupplierOptions() {
+  return prisma.supplier.findMany({
+    select: { id: true, name: true },
+    orderBy: [{ isActive: "desc" }, { name: "asc" }],
+  });
 }

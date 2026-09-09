@@ -39,16 +39,16 @@ export default async function Home() {
               {text.dashboardTitle}
             </h1>
             <div className="mt-5 flex flex-wrap gap-3">
-              <Link href="/api/export/stock" className="rounded-full bg-white/10 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/20">
+              <Link prefetch={false} href="/api/export/stock" className="rounded-full bg-white/10 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/20">
                 {text.exportStock}
               </Link>
-              <Link href="/api/export/suppliers" className="rounded-full bg-white/10 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/20">
+              <Link prefetch={false} href="/api/export/suppliers" className="rounded-full bg-white/10 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/20">
                 {text.exportSuppliers}
               </Link>
-              <Link href="/api/export/orders" className="rounded-full bg-white/10 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/20">
+              <Link prefetch={false} href="/api/export/orders" className="rounded-full bg-white/10 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/20">
                 {text.exportOrders}
               </Link>
-              <Link href="/api/export/inventory" className="rounded-full bg-white/10 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/20">
+              <Link prefetch={false} href="/api/export/inventory" className="rounded-full bg-white/10 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/20">
                 {text.exportInventory}
               </Link>
             </div>

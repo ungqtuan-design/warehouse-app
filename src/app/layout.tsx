@@ -70,6 +70,7 @@ export default async function RootLayout({
                 <Link
                   key={href}
                   href={href}
+                  prefetch={false}
                   className="flex min-w-[140px] flex-none items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium text-slate-200 transition hover:bg-slate-900 hover:text-white lg:min-w-0"
                 >
                   <Icon className="h-4 w-4 text-cyan-300" />

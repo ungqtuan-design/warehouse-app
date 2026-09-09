@@ -1,12 +1,9 @@
 import "server-only";
 
-async function fileToDataUrl(file: File) {
-  const buffer = Buffer.from(await file.arrayBuffer());
-
-  return `data:${file.type};base64,${buffer.toString("base64")}`;
-}
-
 export async function resizeUploadedImage(file: File) {
+  if (!file.type.startsWith("image/") || file.size > 750_000) {
+    throw new Error("invalid-image");
+  }
   const buffer = Buffer.from(await file.arrayBuffer());
 
   try {
@@ -22,8 +19,9 @@ export async function resizeUploadedImage(file: File) {
       .webp({ quality: 82 })
       .toBuffer();
 
+    if (resized.length > 100_000) throw new Error("image-too-large");
     return `data:image/webp;base64,${resized.toString("base64")}`;
   } catch {
-    return `data:${file.type};base64,${buffer.toString("base64")}`;
+    throw new Error("invalid-image");
   }
 }

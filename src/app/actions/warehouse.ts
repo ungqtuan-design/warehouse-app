@@ -157,7 +157,11 @@ export async function createProductAction(
       };
     }
 
-    imageDataUrl = await resizeUploadedImage(imageEntry);
+    try {
+      imageDataUrl = await resizeUploadedImage(imageEntry);
+    } catch {
+      return { status: "error", message: "invalid-image" };
+    }
   }
 
   try {
@@ -171,6 +175,7 @@ export async function createProductAction(
     });
 
     await prisma.product.create({
+      select: { id: true },
       data: {
         sku: parsed.sku,
         name: parsed.name,
@@ -251,7 +256,11 @@ export async function updateProductInlineAction(
       };
     }
 
-    imageDataUrl = await resizeUploadedImage(imageEntry);
+    try {
+      imageDataUrl = await resizeUploadedImage(imageEntry);
+    } catch {
+      return { status: "error", message: "Invalid image file." };
+    }
   }
 
   try {
@@ -266,6 +275,7 @@ export async function updateProductInlineAction(
     });
 
     await prisma.product.update({
+      select: { id: true },
       where: {
         id: parsed.productId,
       },
