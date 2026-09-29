@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import Link from "next/link";
-import { Boxes, ClipboardList, LayoutGrid, LogOut, Package, ShieldUser, ShoppingBasket, Truck } from "lucide-react";
+import { Boxes, Calculator, ClipboardList, LayoutGrid, LogOut, Package, ShieldUser, ShoppingBasket, Truck } from "lucide-react";
 
 import { logoutAction } from "@/app/actions/auth";
 import { BasketProvider } from "@/components/basket-provider";
@@ -47,6 +47,7 @@ export default async function RootLayout({
     { href: "/suppliers", label: text.suppliers, icon: Truck },
     { href: "/inbound", label: text.inbound, icon: Boxes },
     { href: "/inventory", label: text.inventory, icon: ClipboardList },
+    { href: "/warehouse-accounting", label: text.warehouseAccounting, icon: Calculator },
     { href: "/products", label: text.productsNavLabel, icon: Package },
     { href: "/basket", label: text.basket, icon: ShoppingBasket },
   ];
