@@ -20,26 +20,51 @@ export async function GET(request: Request) {
   }
 
   const { filters } = report;
+  const isNet = filters.flow === "CUSTOMER_OUT";
+  const isReturns = filters.flow === "RETURNS";
   const flows = {
     CUSTOMER_OUT: { label: text.accountingCustomerFlow, slug: "kho-le-khach" },
     TRANSFER: { label: text.accountingTransferFlow, slug: "kho-tong-kho-le" },
     MANUFACTURER_IN: { label: text.accountingSupplierFlow, slug: "ncc-kho-tong" },
   };
-  const headers = [text.accountingReportType, text.accountingCsvFlow, text.accountingFrom, text.accountingTo,
-    text.sku, text.product, text.quantity, text.accountingCurrentCost, text.accountingTotalValue];
+  const returnKinds = {
+    all: { label: text.accountingReturnAll, slug: "tat-ca" },
+    hoan: { label: text.accountingHoan, slug: "hang-hoan" },
+    tra: { label: text.accountingTra, slug: "hang-tra" },
+  };
+  const selection = filters.flow === "RETURNS" ? returnKinds[filters.returnKind] : flows[filters.flow];
+  const selectionHeader = isReturns ? text.accountingReturnKind : text.accountingCsvFlow;
+  const quantityHeaders = isNet ? [text.accountingGrossQuantity, text.accountingReturnQuantity, text.accountingNetQuantity]
+    : isReturns ? [text.accountingHoanQuantity, text.accountingTraQuantity, text.accountingTotalReturns] : [text.quantity];
+  const valueHeaders = isNet ? [text.accountingGrossValue, text.accountingReturnValue, text.accountingNetValue]
+    : isReturns ? [text.accountingReturnValue] : [text.accountingTotalValue];
+  const headers = [text.accountingReportType, selectionHeader, text.accountingFrom, text.accountingTo,
+    text.sku, text.product, ...quantityHeaders, text.accountingCurrentCost, ...valueHeaders];
   const rows = report.rows.map((row) => ({
-    [text.accountingReportType]: filters.mode === "outbound" ? text.accountingOutbound : text.accountingInbound,
-    [text.accountingCsvFlow]: flows[filters.flow].label,
+    [text.accountingReportType]: isReturns ? text.accountingReturns : filters.mode === "outbound" ? text.accountingOutbound : text.accountingInbound,
+    [selectionHeader]: selection.label,
     [text.accountingFrom]: filters.from,
     [text.accountingTo]: filters.to,
     [text.sku]: row.sku,
     [text.product]: row.name,
-    [text.quantity]: row.quantity,
+    ...(isNet ? {
+      [text.accountingGrossQuantity]: row.grossQuantity,
+      [text.accountingReturnQuantity]: row.returnQuantity,
+      [text.accountingNetQuantity]: row.netQuantity,
+    } : isReturns ? {
+      [text.accountingHoanQuantity]: row.hoanQuantity,
+      [text.accountingTraQuantity]: row.traQuantity,
+      [text.accountingTotalReturns]: row.returnQuantity,
+    } : { [text.quantity]: row.quantity }),
     [text.accountingCurrentCost]: row.costPrice,
-    [text.accountingTotalValue]: row.value,
+    ...(isNet ? {
+      [text.accountingGrossValue]: row.grossValue,
+      [text.accountingReturnValue]: row.returnValue,
+      [text.accountingNetValue]: row.netValue,
+    } : isReturns ? { [text.accountingReturnValue]: row.returnValue } : { [text.accountingTotalValue]: row.value }),
   }));
-  const direction = filters.mode === "outbound" ? "xuat" : "nhap";
-  const fileName = `ke-toan-kho_${direction}_${flows[filters.flow].slug}_${filters.from}_${filters.to}.csv`;
+  const direction = isReturns ? "hoan-tra" : isNet ? "xuat-rong" : filters.mode === "outbound" ? "xuat" : "nhap";
+  const fileName = `ke-toan-kho_${direction}_${selection.slug}_${filters.from}_${filters.to}.csv`;
 
   return new NextResponse(toCsv(rows, headers), {
     headers: {
