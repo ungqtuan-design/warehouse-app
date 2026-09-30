@@ -12,7 +12,7 @@ function load(file, dependencies) {
     module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX,
   } }).outputText;
   const exports = {};
-  vm.runInNewContext(code, { exports, Date, Map, BigInt, URLSearchParams, require: (id) => {
+  vm.runInNewContext(code, { exports, Date, Map, BigInt, URL, URLSearchParams, require: (id) => {
     if (Object.hasOwn(dependencies, id)) return dependencies[id];
     if (id === 'react/jsx-runtime') return require(id);
     throw new Error(`Unexpected dependency: ${id}`);
@@ -226,10 +226,14 @@ test('large totals and fractional cost preserve exact cents, with localized VND 
   assert.equal(report.formatAccountingMoney(result.totalValue, 'en'), '1,999,999,999,999,980,000,000.3 ₫');
 });
 
+function loadUi(language) {
+  return load('src/lib/ui.ts', { 'server-only': {}, 'next/headers': { cookies: async () => ({ get: (name) => ({ value: name === 'language' ? language : 'light' }) }) },
+    '@/lib/ui-preferences': { uiCookieNames: { language: 'language', theme: 'theme' }, legacyUiCookieNames: {} } });
+}
+
 async function renderPage(params, language = 'en', authorize = async () => {}) {
   const { report } = fixture();
-  const ui = load('src/lib/ui.ts', { 'server-only': {}, 'next/headers': { cookies: async () => ({ get: (name) => ({ value: name === 'language' ? language : 'light' }) }) },
-    '@/lib/ui-preferences': { uiCookieNames: { language: 'language', theme: 'theme' }, legacyUiCookieNames: {} } });
+  const ui = loadUi(language);
   const page = load('src/app/warehouse-accounting/page.tsx', {
     'next/link': { default: ({ children, prefetch, ...props }) => {
       assert.equal(prefetch, false);
@@ -265,4 +269,149 @@ test('page renders both dictionaries, selected flow, 5 columns, totals, and loca
 
 test('page requires authentication before reporting', async () => {
   await assert.rejects(renderPage(dates, 'en', async () => { throw new Error('redirect:/login'); }), /redirect:\/login/);
+});
+
+function exportCsv(report, params = dates, language = 'vi', authorize = async () => {}) {
+  const route = load('src/app/api/export/warehouse-accounting/route.ts', {
+    'next/server': require('next/server'),
+    '@/lib/auth': { requireUser: authorize },
+    '@/lib/ui': loadUi(language),
+    '@/lib/csv': load('src/lib/csv.ts', {}),
+    '@/lib/warehouse-accounting': report,
+  });
+  const query = typeof params === 'string' ? params : new URLSearchParams(params).toString();
+  return route.GET(new Request(`http://localhost/api/export/warehouse-accounting?${query}`));
+}
+
+async function csvBody(response) {
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get('content-type'), 'text/csv; charset=utf-8');
+  assert.match(response.headers.get('cache-control'), /no-store/);
+  const bytes = Buffer.from(await response.arrayBuffer());
+  assert.deepEqual([...bytes.subarray(0, 3)], [0xef, 0xbb, 0xbf], 'UTF-8 BOM for Excel');
+  return bytes.subarray(3).toString('utf8');
+}
+
+const viCsvHeaders = 'Loại báo cáo,Luồng,Từ ngày,Đến ngày,SKU,Sản phẩm,Số lượng,Giá vốn hiện tại,Tổng giá trị';
+const selections = [
+  { mode: 'outbound', flow: 'CUSTOMER_OUT', type: 'Xuất kho', label: 'Kho Lẻ → Khách hàng',
+    data: 'SKU001,Product A,15,40000.00,600000.00', file: 'xuat_kho-le-khach' },
+  { mode: 'outbound', flow: 'TRANSFER', type: 'Xuất kho', label: 'Kho Tổng → Kho Lẻ',
+    data: 'SKU002,Product B,10,0.10,1.00', file: 'xuat_kho-tong-kho-le' },
+  { mode: 'inbound', flow: 'TRANSFER', type: 'Nhập kho', label: 'Kho Tổng → Kho Lẻ',
+    data: 'SKU002,Product B,10,0.10,1.00', file: 'nhap_kho-tong-kho-le' },
+  { mode: 'inbound', flow: 'MANUFACTURER_IN', type: 'Nhập kho', label: 'NCC → Kho Tổng',
+    data: 'SKU001,Product A,4,40000.00,160000.00', file: 'nhap_ncc-kho-tong' },
+];
+
+for (const selection of selections) {
+  test(`CSV ${selection.mode}/${selection.flow} matches the report with one aggregate row and a safe filename`, async () => {
+    const { report, calls, transactions, products } = fixture();
+    const before = JSON.stringify({ transactions, products });
+    const params = { ...dates, mode: selection.mode, flow: selection.flow };
+    const response = await exportCsv(report, params);
+    assert.equal(response.headers.get('content-disposition'),
+      `attachment; filename="ke-toan-kho_${selection.file}_2026-09-01_2026-09-29.csv"`);
+    const csv = await csvBody(response);
+    assert.equal(csv, `${viCsvHeaders}\n${selection.type},${selection.label},2026-09-01,2026-09-29,${selection.data}`);
+    assert.equal(calls.length, 1, 'one DB aggregation, no transaction detail fetch');
+    assert.equal(calls[0].where.createdAt.gte.toISOString(), '2026-08-31T17:00:00.000Z');
+    assert.equal(calls[0].where.createdAt.lt.toISOString(), '2026-09-29T17:00:00.000Z');
+    const screen = await report.getWarehouseAccountingReport(params);
+    const cells = csv.split('\n')[1].split(',');
+    assert.equal(cells[6], String(screen.totalQuantity));
+    assert.equal(cells[7], screen.rows[0].costPrice);
+    assert.equal(cells[8], screen.totalValue);
+    assert.equal(JSON.stringify({ transactions, products }), before);
+  });
+}
+
+test('TRANSFER CSV uses identical data and DB filters for both views', async () => {
+  const { report, calls } = fixture();
+  const outbound = await csvBody(await exportCsv(report, { ...dates, mode: 'outbound', flow: 'TRANSFER' }));
+  const inbound = await csvBody(await exportCsv(report, { ...dates, mode: 'inbound', flow: 'TRANSFER' }));
+  assert.equal(inbound.replace('Nhập kho', 'Xuất kho'), outbound);
+  assert.equal(JSON.stringify(calls[0]), JSON.stringify(calls[1]));
+});
+
+test('CSV uses the current product cost, preserves exact decimal cents and Vietnamese names with commas, quotes and newlines', async () => {
+  const { report, products } = fixture();
+  products[0].name = 'Cà phê, "Đặc biệt"\r\nHộp giấy\rGói lẻ';
+  products[0].costPrice = new realPrisma.Prisma.Decimal('1544.01');
+  const csv = await csvBody(await exportCsv(report));
+  assert.equal(csv, `${viCsvHeaders}\nXuất kho,Kho Lẻ → Khách hàng,2026-09-01,2026-09-29,SKU001,"Cà phê, ""Đặc biệt""\r\nHộp giấy\rGói lẻ",15,1544.01,23160.15`);
+  assert.doesNotMatch(csv, /₫/);
+});
+
+test('CSV language follows validated UI cookies; empty reports retain all nine headers', async () => {
+  const { report } = fixture();
+  const en = await csvBody(await exportCsv(report, dates, 'en'));
+  assert.equal(en, 'Report type,Flow,From date,To date,SKU,Product,Quantity,Current cost,Total value\nOutbound,Retail warehouse → Customer,2026-09-01,2026-09-29,SKU001,Product A,15,40000.00,600000.00');
+  const fallback = await csvBody(await exportCsv(report, dates, 'unsupported-language'));
+  assert.equal(fallback, en);
+  const emptyReport = api({ inventoryTransaction: { groupBy: async () => [] } });
+  assert.equal(await csvBody(await exportCsv(emptyReport)), viCsvHeaders);
+});
+
+test('CSV accepts exactly 60 inclusive days and rejects invalid or duplicate filters before any DB query', async () => {
+  const { report, calls } = fixture();
+  await csvBody(await exportCsv(report, { from: '2026-01-01', to: '2026-03-01' }));
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].where.createdAt.gte.toISOString(), '2025-12-31T17:00:00.000Z');
+  assert.equal(calls[0].where.createdAt.lt.toISOString(), '2026-03-01T17:00:00.000Z');
+  const invalidReport = api(); // No DB methods available: any query fails this test.
+  const { text } = await loadUi('vi').getUiContext();
+  for (const [params, error] of [
+    [{ from: '2026-01-01', to: '2026-03-02' }, 'accountingDateLimit'],
+    [{ from: '2026-09-29', to: '2026-09-01' }, 'accountingDateOrder'],
+    [{ ...dates, from: '2026-02-29' }, 'accountingInvalidDate'],
+    [{ ...dates, to: '2026-09-31' }, 'accountingInvalidDate'],
+    [{ ...dates, from: '2026-9-01' }, 'accountingInvalidDate'],
+    [{ ...dates, to: '' }, 'accountingInvalidDate'],
+    [{ ...dates, from: '2026-09-01\r\nInjected: header' }, 'accountingInvalidDate'],
+    [{ ...dates, mode: 'unknown' }, 'accountingInvalidParameters'],
+    [{ ...dates, flow: 'ADJUSTMENT' }, 'accountingInvalidParameters'],
+    [{ ...dates, flow: 'MANUFACTURER_IN', mode: 'outbound' }, 'accountingInvalidParameters'],
+    [{ ...dates, flow: 'CUSTOMER_OUT', mode: 'inbound' }, 'accountingInvalidParameters'],
+    ...['mode', 'flow', 'from', 'to'].map((key) => [
+      `${new URLSearchParams({ ...dates, mode: 'outbound', flow: 'CUSTOMER_OUT' })}&${key}=duplicate`,
+      'accountingInvalidParameters',
+    ]),
+  ]) {
+    const response = await exportCsv(invalidReport, params);
+    assert.equal(response.status, 400, JSON.stringify(params));
+    assert.deepEqual(await response.json(), { error: text[error] });
+    assert.equal(response.headers.get('content-disposition'), null);
+  }
+});
+
+test('CSV requires authentication before querying the report', async () => {
+  const { report, calls } = fixture();
+  await assert.rejects(exportCsv(report, dates, 'vi', async () => { throw new Error('redirect:/login'); }), /redirect:\/login/);
+  assert.equal(calls.length, 0);
+});
+
+test('export buttons use applied filters for all four selections in both languages and hide on invalid input', async () => {
+  for (const language of ['vi', 'en']) {
+    for (const { mode, flow } of selections) {
+      const html = await renderPage({ ...dates, mode, flow }, language);
+      const link = html.match(/<a href="(\/api\/export\/warehouse-accounting\?[^"]+)"[^>]*>([^<]+)<\/a>/);
+      assert.ok(link);
+      assert.equal(link[2], language === 'vi' ? 'Xuất CSV' : 'Export CSV');
+      const url = new URL(link[1].replaceAll('&amp;', '&'), 'http://localhost');
+      assert.deepEqual(Object.fromEntries(url.searchParams), { ...dates, mode, flow });
+    }
+    const invalid = await renderPage({ from: '2026-01-01', to: '2026-03-02' }, language);
+    assert.doesNotMatch(invalid, /\/api\/export\/warehouse-accounting/);
+    const defaultFlow = await renderPage(dates, language);
+    assert.match(defaultFlow, /mode=outbound&amp;flow=CUSTOMER_OUT&amp;from=2026-09-01&amp;to=2026-09-29/);
+  }
+});
+
+test('shared CSV helper preserves existing inferred headers and handles explicit empty schemas and carriage returns', () => {
+  const { toCsv } = load('src/lib/csv.ts', {});
+  assert.equal(toCsv([]), '\uFEFF');
+  assert.equal(toCsv([{ sku: 'A', quantity: 15, cost: '1544.00', note: null }]), '\uFEFFsku,quantity,cost,note\nA,15,1544.00,');
+  assert.equal(toCsv([], ['SKU', 'Product']), '\uFEFFSKU,Product');
+  assert.equal(toCsv([{ 'Product, label': 'Cà phê\rHộp', quantity: 1 }]), '\uFEFF"Product, label",quantity\n"Cà phê\rHộp",1');
 });

@@ -65,6 +65,13 @@ export default async function WarehouseAccountingPage({ searchParams }: { search
           ))}
         </section>
         <section className="min-w-0 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
+          <div className="mb-4 flex justify-end">
+            <a href={`/api/export/warehouse-accounting?${new URLSearchParams({
+              mode: report.filters.mode, flow: report.filters.flow, from: report.filters.from, to: report.filters.to,
+            })}`} className="rounded-xl bg-slate-950 px-4 py-2 text-sm font-semibold text-white">
+              {text.accountingExport}
+            </a>
+          </div>
           <div className="overflow-x-auto rounded-2xl border border-slate-200">
             <table className="w-full min-w-[700px] divide-y divide-slate-200 text-left text-sm">
               <caption className="sr-only">{text.warehouseAccounting}</caption>
