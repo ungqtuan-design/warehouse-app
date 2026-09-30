@@ -3,11 +3,11 @@ import { UserRole } from "@prisma/client";
 import { CreateUserForm, ResetPasswordForm } from "@/components/manage-user-forms";
 import { requireAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { getUiContext } from "@/lib/ui";
+import { uiText as text } from "@/lib/ui";
 
 export default async function ManageUsersPage() {
   await requireAdmin();
-  const [{ text }, users] = await Promise.all([getUiContext(), prisma.user.findMany({
+  const users = await prisma.user.findMany({
     select: {
       id: true,
       username: true,
@@ -15,7 +15,7 @@ export default async function ManageUsersPage() {
       createdAt: true,
     },
     orderBy: [{ role: "asc" }, { username: "asc" }],
-  })]);
+  });
 
   return (
     <div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">

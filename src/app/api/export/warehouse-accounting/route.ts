@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 
 import { requireUser } from "@/lib/auth";
 import { toCsv } from "@/lib/csv";
-import { getUiContext } from "@/lib/ui";
+import { uiText as text } from "@/lib/ui";
 import { getWarehouseAccountingReport, type AccountingParams } from "@/lib/warehouse-accounting";
 
 export async function GET(request: Request) {
@@ -14,7 +14,7 @@ export async function GET(request: Request) {
     const values = searchParams.getAll(key);
     return [key, values.length === 1 ? values[0] : values];
   }));
-  const [{ text }, report] = await Promise.all([getUiContext(), getWarehouseAccountingReport(params)]);
+  const report = await getWarehouseAccountingReport(params);
   if (!report.ok) {
     return NextResponse.json({ error: text[report.error] }, { status: 400, headers: { "Cache-Control": "no-store" } });
   }

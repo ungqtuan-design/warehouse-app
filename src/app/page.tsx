@@ -2,13 +2,13 @@ import Link from "next/link";
 
 import { requireUser } from "@/lib/auth";
 import { formatNumber } from "@/lib/format";
-import { getUiContext } from "@/lib/ui";
+import { uiText as text } from "@/lib/ui";
 import { getDashboardData } from "@/lib/warehouse-data";
 
 export default async function Home() {
   await requireUser();
 
-  const [{ text }, { metrics, watchRows }] = await Promise.all([getUiContext(), getDashboardData()]);
+  const { metrics, watchRows } = await getDashboardData();
 
   const riskClassNames = {
     red: "bg-rose-50 text-rose-700",

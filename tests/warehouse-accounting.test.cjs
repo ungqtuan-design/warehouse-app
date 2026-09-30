@@ -239,7 +239,7 @@ test('zero current cost keeps the quantity and produces zero value without chang
   assert.equal(JSON.stringify(products), before);
 });
 
-test('large totals and fractional cost preserve exact cents, with localized VND formatting', async () => {
+test('large totals and fractional cost preserve exact cents, with Vietnamese VND formatting', async () => {
   const report = api({ $queryRaw: async () => [], inventoryTransaction: { groupBy: async () => [
     { productId: 'A', _sum: { quantity: 2000000000 } }, { productId: 'B', _sum: { quantity: 3 } },
   ] }, product: { findMany: async () => [
@@ -249,16 +249,17 @@ test('large totals and fractional cost preserve exact cents, with localized VND 
   const result = await report.getWarehouseAccountingReport(dates);
   assert.equal(result.totalValue, '1999999999999980000000.30');
   assert.equal(result.rows[1].value, '0.30');
-  assert.equal(report.formatAccountingMoney('5400000.00', 'vi'), '5.400.000 ₫');
-  assert.equal(report.formatAccountingMoney(result.totalValue, 'en'), '1,999,999,999,999,980,000,000.3 ₫');
+  assert.equal(report.formatAccountingMoney('5400000.00'), '5.400.000 ₫');
+  assert.equal(report.formatAccountingMoney(result.totalValue), '1.999.999.999.999.980.000.000,3 ₫');
 });
 
 function loadUi(language) {
-  return load('src/lib/ui.ts', { 'server-only': {}, 'next/headers': { cookies: async () => ({ get: (name) => ({ value: name === 'language' ? language : 'light' }) }) },
-    '@/lib/ui-preferences': { uiCookieNames: { language: 'language', theme: 'theme' }, legacyUiCookieNames: {} } });
+  return load('src/lib/ui.ts', { 'server-only': {}, 'next/headers': { cookies: async () => ({
+    get: (name) => language === undefined ? undefined : ({ value: name.endsWith('_lang') ? language : 'dark' }),
+  }) } });
 }
 
-async function renderPage(params, language = 'en', authorize = async () => {}, report = fixture().report) {
+async function renderPage(params, language, authorize = async () => {}, report = fixture().report) {
   const ui = loadUi(language);
   const page = load('src/app/warehouse-accounting/page.tsx', {
     'next/link': { default: ({ children, prefetch, ...props }) => {
@@ -271,21 +272,21 @@ async function renderPage(params, language = 'en', authorize = async () => {}, r
   return renderToStaticMarkup(await page.default({ searchParams: Promise.resolve(params) }));
 }
 
-test('page renders both dictionaries, selected flow, net columns, totals, and localized errors/empty state', async () => {
-  for (const language of ['vi', 'en']) {
+test('page stays Vietnamese with absent or legacy English/dark preferences, including errors and empty states', async () => {
+  for (const language of [undefined, 'vi', 'en', 'EN', 'English', 'unsupported-language']) {
     const html = await renderPage(dates, language);
     assert.match(html, /value="CUSTOMER_OUT" selected=""/);
     assert.equal((html.match(/<option /g) || []).length, 2);
     assert.equal((html.match(/scope="col"/g) || []).length, 9);
-    assert.match(html, language === 'vi' ? /Kế toán kho/ : /Warehouse accounting/);
-    assert.match(html, language === 'vi' ? /600\.000 ₫/ : /600,000 ₫/);
+    assert.match(html, /Kế toán kho/);
+    assert.match(html, /600\.000 ₫/);
     assert.match(html, /overflow-x-auto/);
     const invalid = await renderPage({ from: '2026-01-01', to: '2026-03-02' }, language);
     assert.match(invalid, /role="alert"/);
     assert.match(invalid, /60/);
     assert.doesNotMatch(invalid, /<table/);
     const empty = await renderPage({ from: '2026-01-01', to: '2026-01-02' }, language);
-    assert.match(empty, language === 'vi' ? /Không có dữ liệu/ : /No data/);
+    assert.match(empty, /Không có dữ liệu/);
     assert.match(empty, /0 ₫/);
     const inbound = await renderPage({ ...dates, mode: 'inbound' }, language);
     assert.match(inbound, /value="MANUFACTURER_IN" selected=""/);
@@ -297,7 +298,7 @@ test('page requires authentication before reporting', async () => {
   await assert.rejects(renderPage(dates, 'en', async () => { throw new Error('redirect:/login'); }), /redirect:\/login/);
 });
 
-function exportCsv(report, params = dates, language = 'vi', authorize = async () => {}) {
+function exportCsv(report, params = dates, language, authorize = async () => {}) {
   const route = load('src/app/api/export/warehouse-accounting/route.ts', {
     'next/server': require('next/server'),
     '@/lib/auth': { requireUser: authorize },
@@ -374,12 +375,12 @@ test('CSV uses the current product cost, preserves exact decimal cents and Vietn
   assert.doesNotMatch(csv, /₫/);
 });
 
-test('CSV language follows validated UI cookies; empty reports retain the selected schema', async () => {
+test('CSV always uses Vietnamese despite legacy preferences; empty reports retain the selected schema', async () => {
   const { report } = fixture();
-  const en = await csvBody(await exportCsv(report, dates, 'en'));
-  assert.equal(en, 'Report type,Flow,From date,To date,SKU,Product,Gross outbound quantity,Return quantity,Net outbound quantity,Current cost,Gross outbound value,Return value,Net value\nOutbound,Retail warehouse → Customer,2026-09-01,2026-09-29,SKU001,Product A,15,0,15,40000.00,600000.00,0.00,600000.00');
-  const fallback = await csvBody(await exportCsv(report, dates, 'unsupported-language'));
-  assert.equal(fallback, en);
+  for (const language of [undefined, 'vi', 'en', 'EN', 'English', 'unsupported-language']) {
+    const csv = await csvBody(await exportCsv(report, dates, language));
+    assert.equal(csv, viNetHeaders + '\nXuất kho,Kho Lẻ → Khách hàng,2026-09-01,2026-09-29,SKU001,Product A,15,0,15,40000.00,600000.00,0.00,600000.00');
+  }
   const emptyReport = api({ inventoryTransaction: { groupBy: async () => [] }, $queryRaw: async () => [] });
   assert.equal(await csvBody(await exportCsv(emptyReport)), viNetHeaders);
   assert.equal(await csvBody(await exportCsv(emptyReport, { ...dates, flow: 'TRANSFER' })), viCsvHeaders);
@@ -393,7 +394,7 @@ test('CSV accepts exactly 60 inclusive days and rejects invalid or duplicate fil
   assert.equal(calls[0].where.createdAt.gte.toISOString(), '2025-12-31T17:00:00.000Z');
   assert.equal(calls[0].where.createdAt.lt.toISOString(), '2026-03-01T17:00:00.000Z');
   const invalidReport = api(); // No DB methods available: any query fails this test.
-  const { text } = await loadUi('vi').getUiContext();
+  const { uiText: text } = loadUi('vi');
   for (const [params, error] of [
     [{ from: '2026-01-01', to: '2026-03-02' }, 'accountingDateLimit'],
     [{ from: '2026-09-29', to: '2026-09-01' }, 'accountingDateOrder'],
@@ -427,13 +428,13 @@ test('CSV requires authentication before querying the report', async () => {
   assert.equal(sqlCalls.length, 0);
 });
 
-test('export buttons use applied filters for all four selections in both languages and hide on invalid input', async () => {
-  for (const language of ['vi', 'en']) {
+test('export buttons use applied filters for all four selections with legacy preferences and hide on invalid input', async () => {
+  for (const language of [undefined, 'vi', 'en', 'EN', 'English', 'unsupported-language']) {
     for (const { mode, flow } of selections) {
       const html = await renderPage({ ...dates, mode, flow }, language);
       const link = html.match(/<a href="(\/api\/export\/warehouse-accounting\?[^"]+)"[^>]*>([^<]+)<\/a>/);
       assert.ok(link);
-      assert.equal(link[2], language === 'vi' ? 'Xuất CSV' : 'Export CSV');
+      assert.equal(link[2], 'Xuất CSV');
       const url = new URL(link[1].replaceAll('&amp;', '&'), 'http://localhost');
       assert.deepEqual(Object.fromEntries(url.searchParams), { ...dates, mode, flow });
     }
@@ -510,7 +511,7 @@ test('prior-period sale with a current return is included as a negative SKU, inc
   const html = await renderPage(dates, 'vi', undefined, report);
   assert.match(html, />-5</);
   assert.match(html, />-0,5 ₫</);
-  assert.equal(report.formatAccountingMoney('-0.50', 'en'), '-0.5 ₫');
+  assert.equal(report.formatAccountingMoney('-0.50'), '-0,5 ₫');
 });
 
 test('note normalization is exact; supplier inbound excludes returns and adjustments but keeps null and unrelated free text', async () => {
@@ -556,14 +557,14 @@ test('net CSV column totals reconcile with the three UI KPIs and show the accoun
   const { report } = netFixture();
   const csv = await csvBody(await exportCsv(report));
   assert.equal(csv, `${viNetHeaders}\nXuất kho,Kho Lẻ → Khách hàng,2026-09-01,2026-09-29,SKU001,Product A,100,15,85,40000.00,4000000.00,600000.00,3400000.00`);
-  for (const language of ['vi', 'en']) {
+  for (const language of [undefined, 'vi', 'en', 'EN', 'English', 'unsupported-language']) {
     const html = await renderPage(dates, language, undefined, report);
-    const { text } = await loadUi(language).getUiContext();
+    const { uiText: text } = loadUi(language);
     for (const [label, quantity, value] of [[text.accountingGross, 100, '4000000.00'],
       [text.accountingReturns, 15, '600000.00'], [text.accountingNet, 85, '3400000.00']]) {
       const card = html.split(`<article aria-label="${label}"`)[1].split('</article>')[0];
       assert.ok(card.includes(`>${quantity}</dd>`));
-      assert.ok(card.includes(report.formatAccountingMoney(value, language)));
+      assert.ok(card.includes(report.formatAccountingMoney(value)));
     }
     assert.ok(html.includes(text.accountingNetNote));
     assert.ok(html.includes(text.accountingPeriodNote));
@@ -592,13 +593,13 @@ for (const [kind, label, hoan, tra, value, slug] of [
     assert.equal(response.headers.get('content-disposition'),
       `attachment; filename="ke-toan-kho_hoan-tra_${slug}_2026-09-01_2026-09-29.csv"`);
     assert.equal(await csvBody(response), `${viReturnHeaders}\nHàng hoàn / trả,${label},2026-09-01,2026-09-29,SKU001,Product A,${hoan},${tra},${hoan + tra},40000.00,${value}`);
-    for (const language of ['vi', 'en']) {
+    for (const language of [undefined, 'vi', 'en', 'EN', 'English', 'unsupported-language']) {
       const html = await renderPage(params, language, undefined, report);
       assert.equal((html.match(/scope="col"/g) || []).length, 7);
       assert.equal((html.match(/<option /g) || []).length, 3);
       assert.ok(html.includes(`value="${kind}" selected=""`));
       assert.ok(html.includes(`returnKind=${kind}`));
-      assert.ok(html.includes(report.formatAccountingMoney(value, language)));
+      assert.ok(html.includes(report.formatAccountingMoney(value)));
       assert.match(html, /name="flow" value="RETURNS"/);
       const link = html.match(/href="(\/api\/export\/warehouse-accounting\?[^"]+)"/)[1];
       assert.deepEqual(Object.fromEntries(new URL(link.replaceAll('&amp;', '&'), 'http://localhost').searchParams), params);

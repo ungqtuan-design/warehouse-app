@@ -3,13 +3,13 @@ import { ChevronsUpDown } from "lucide-react";
 import { SupplierCreateForm, SupplierUpdateForm } from "@/components/supplier-forms";
 import { SuppliersWorkspace } from "@/components/suppliers-workspace";
 import { requireUser } from "@/lib/auth";
-import { getUiContext } from "@/lib/ui";
+import { uiText as text } from "@/lib/ui";
 import { getSupplierCount } from "@/lib/warehouse-data";
 
 export default async function SuppliersPage() {
   await requireUser();
 
-  const [supplierCount, { text }] = await Promise.all([getSupplierCount(), getUiContext()]);
+  const supplierCount = await getSupplierCount();
 
   return (
     <div className="grid gap-6">

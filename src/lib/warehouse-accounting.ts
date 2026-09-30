@@ -175,10 +175,9 @@ export async function getWarehouseAccountingReport(params: AccountingParams, now
 }
 
 // Format exact decimal strings, without converting money to floating point.
-export function formatAccountingMoney(value: string, language: "vi" | "en") {
+export function formatAccountingMoney(value: string) {
   const sign = value.startsWith("-") ? "-" : "";
   const [whole, fraction = ""] = (sign ? value.slice(1) : value).split(".");
-  const locale = language === "vi" ? "vi-VN" : "en-US";
   const decimals = fraction.replace(/0+$/, "");
-  return `${sign}${BigInt(whole).toLocaleString(locale)}${decimals ? `${language === "vi" ? "," : "."}${decimals}` : ""} ₫`;
+  return `${sign}${BigInt(whole).toLocaleString("vi-VN")}${decimals ? `,${decimals}` : ""} ₫`;
 }

@@ -2,13 +2,13 @@ import Link from "next/link";
 
 import { requireUser } from "@/lib/auth";
 import { formatNumber } from "@/lib/format";
-import { getUiContext } from "@/lib/ui";
+import { uiText as text } from "@/lib/ui";
 import { formatAccountingMoney, getWarehouseAccountingReport, parseAccountingFilters, type AccountingParams } from "@/lib/warehouse-accounting";
 
 export default async function WarehouseAccountingPage({ searchParams }: { searchParams: Promise<AccountingParams> }) {
   await requireUser();
   const params = await searchParams;
-  const [{ text, language }, report] = await Promise.all([getUiContext(), getWarehouseAccountingReport(params)]);
+  const report = await getWarehouseAccountingReport(params);
   const defaults = parseAccountingFilters({});
   if (!defaults.ok) throw new Error("Invalid current date");
   const filters = report.ok ? report.filters : defaults.filters;
@@ -63,10 +63,10 @@ export default async function WarehouseAccountingPage({ searchParams }: { search
             </select>
           </label>}
           <label className="min-w-0 text-sm text-slate-600">{text.accountingFrom}
-            <input key={`from-${from}`} type="date" name="from" required defaultValue={from} className={`${control} [color-scheme:light] [.theme-dark_&]:[color-scheme:dark]`} aria-describedby="accounting-date-hint" />
+            <input key={`from-${from}`} type="date" name="from" required defaultValue={from} className={`${control} [color-scheme:light]`} aria-describedby="accounting-date-hint" />
           </label>
           <label className="min-w-0 text-sm text-slate-600">{text.accountingTo}
-            <input key={`to-${to}`} type="date" name="to" required defaultValue={to} className={`${control} [color-scheme:light] [.theme-dark_&]:[color-scheme:dark]`} aria-describedby="accounting-date-hint" />
+            <input key={`to-${to}`} type="date" name="to" required defaultValue={to} className={`${control} [color-scheme:light]`} aria-describedby="accounting-date-hint" />
           </label>
           <button type="submit" className="rounded-xl bg-slate-950 px-4 py-2 text-sm font-semibold text-white">{text.accountingApply}</button>
         </form>
@@ -90,13 +90,13 @@ export default async function WarehouseAccountingPage({ searchParams }: { search
                 <div><dt className="text-sm text-slate-500">{text.quantity}</dt>
                   <dd className="break-words text-2xl font-semibold text-slate-950">{formatNumber(card.quantity)}</dd></div>
                 <div><dt className="text-sm text-slate-500">{text.accountingTotalValue}</dt>
-                  <dd className="break-words text-xl font-semibold text-slate-950">{formatAccountingMoney(card.value, language)}</dd></div>
+                  <dd className="break-words text-xl font-semibold text-slate-950">{formatAccountingMoney(card.value)}</dd></div>
               </dl>
             </article>
           ))}
         </section> : <section className="grid gap-4 sm:grid-cols-2" aria-label={text.warehouseAccounting}>
           {[{ label: text.accountingTotalQuantity, value: formatNumber(report.totalQuantity) },
-            { label: text.accountingTotalValue, value: formatAccountingMoney(report.totalValue, language) }].map((card) => (
+            { label: text.accountingTotalValue, value: formatAccountingMoney(report.totalValue) }].map((card) => (
             <article key={card.label} className="min-w-0 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
               <p className="text-sm text-slate-500">{card.label}</p>
               <p className="mt-3 break-words text-3xl font-semibold text-slate-950">{card.value}</p>
@@ -134,12 +134,12 @@ export default async function WarehouseAccountingPage({ searchParams }: { search
                       <td className="px-4 py-3 text-right tabular-nums text-slate-600">{formatNumber(row.traQuantity)}</td>
                       <td className="px-4 py-3 text-right tabular-nums text-slate-600">{formatNumber(row.returnQuantity)}</td>
                     </> : <td className="px-4 py-3 text-right tabular-nums text-slate-600">{formatNumber(row.quantity)}</td>}
-                    <td className="whitespace-nowrap px-4 py-3 text-right tabular-nums text-slate-600">{formatAccountingMoney(row.costPrice, language)}</td>
+                    <td className="whitespace-nowrap px-4 py-3 text-right tabular-nums text-slate-600">{formatAccountingMoney(row.costPrice)}</td>
                     {isNet && <>
-                      <td className="whitespace-nowrap px-4 py-3 text-right tabular-nums text-slate-600">{formatAccountingMoney(row.grossValue, language)}</td>
-                      <td className="whitespace-nowrap px-4 py-3 text-right tabular-nums text-slate-600">{formatAccountingMoney(row.returnValue, language)}</td>
+                      <td className="whitespace-nowrap px-4 py-3 text-right tabular-nums text-slate-600">{formatAccountingMoney(row.grossValue)}</td>
+                      <td className="whitespace-nowrap px-4 py-3 text-right tabular-nums text-slate-600">{formatAccountingMoney(row.returnValue)}</td>
                     </>}
-                    <td className="whitespace-nowrap px-4 py-3 text-right font-semibold tabular-nums text-slate-950">{formatAccountingMoney(row.value, language)}</td>
+                    <td className="whitespace-nowrap px-4 py-3 text-right font-semibold tabular-nums text-slate-950">{formatAccountingMoney(row.value)}</td>
                   </tr>)}
               </tbody>
             </table>

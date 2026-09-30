@@ -1,13 +1,13 @@
 import { InboundBatchEditor } from "@/components/inbound-batch-editor";
 import { requireUser } from "@/lib/auth";
 import { formatNumber } from "@/lib/format";
-import { getUiContext } from "@/lib/ui";
+import { uiText as text } from "@/lib/ui";
 import { getInboundProductOptions, getInboundRows } from "@/lib/warehouse-data";
 
 export default async function InboundPage() {
   await requireUser();
 
-  const [inboundRows, products, { text }] = await Promise.all([getInboundRows(), getInboundProductOptions(), getUiContext()]);
+  const [inboundRows, products] = await Promise.all([getInboundRows(), getInboundProductOptions()]);
 
   return (
     <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">

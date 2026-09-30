@@ -6,23 +6,13 @@ import { Boxes, Calculator, ClipboardList, LayoutGrid, LogOut, Package, ShieldUs
 import { logoutAction } from "@/app/actions/auth";
 import { BasketProvider } from "@/components/basket-provider";
 import { InventoryBasketCount } from "@/components/inventory-basket-count";
-import { PreferenceToggles } from "@/components/preference-toggles";
 import { getCurrentUser } from "@/lib/auth";
-import { getUiContext } from "@/lib/ui";
+import { uiText as text } from "@/lib/ui";
 
 export const metadata: Metadata = {
   title: "MIMS",
-  description: "Mood Inventory Management System for Kho Tong and Kho Le",
+  description: "Quản lý tồn kho cho Kho Tổng và Kho Lẻ",
 };
-
-const baseNavigation = [
-  { href: "/", label: "Dashboard", icon: LayoutGrid },
-  { href: "/products", label: "Products", icon: Package },
-  { href: "/suppliers", label: "Suppliers", icon: Truck },
-  { href: "/inbound", label: "Inbound", icon: Boxes },
-  { href: "/inventory", label: "Inventory", icon: ClipboardList },
-  { href: "/basket", label: "Basket", icon: ShoppingBasket },
-];
 
 export default async function RootLayout({
   children,
@@ -30,12 +20,11 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const user = await getCurrentUser();
-  const { language, theme, text } = await getUiContext();
 
   if (!user) {
     return (
-      <html lang={language} className="h-full">
-        <body className={`theme-${theme} min-h-full text-slate-50`}>
+      <html lang="vi" className="h-full">
+        <body className="min-h-full text-slate-900">
           <main className="flex min-h-screen items-center justify-center px-4 py-10 sm:px-6">{children}</main>
         </body>
       </html>
@@ -57,8 +46,8 @@ export default async function RootLayout({
     : baseNavigation;
 
   return (
-    <html lang={language} className="h-full">
-      <body className={`theme-${theme} min-h-full text-slate-900`}>
+    <html lang="vi" className="h-full">
+      <body className="min-h-full text-slate-900">
         <BasketProvider>
           <div className="app-shell min-h-screen lg:grid lg:grid-cols-[18rem_1fr]">
           <aside className="border-b border-slate-200 bg-slate-950 text-slate-50 lg:min-h-screen lg:border-b-0 lg:border-r">
@@ -85,7 +74,6 @@ export default async function RootLayout({
             <header className="app-header border-b border-slate-200 bg-white px-4 py-4 shadow-sm sm:px-6">
               <div className="flex justify-end">
                 <div className="flex flex-wrap items-center justify-end gap-3">
-                  <PreferenceToggles theme={theme} language={language} text={text} />
                   <div className="rounded-full bg-cyan-50 px-4 py-2 text-sm font-medium text-cyan-900">
                     {user.role === "ADMIN" ? text.admin : text.operation}
                   </div>

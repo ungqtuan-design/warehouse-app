@@ -3,13 +3,13 @@ import { ChevronsUpDown } from "lucide-react";
 import { ProductCreateForm } from "@/components/product-create-form";
 import { ProductsBrowser } from "@/components/products-browser";
 import { requireUser } from "@/lib/auth";
-import { getUiContext } from "@/lib/ui";
+import { uiText as text } from "@/lib/ui";
 import { getProductCount, getSupplierOptions } from "@/lib/warehouse-data";
 
 export default async function ProductsPage() {
   await requireUser();
 
-  const [productCount, suppliers, { text }] = await Promise.all([getProductCount(), getSupplierOptions(), getUiContext()]);
+  const [productCount, suppliers] = await Promise.all([getProductCount(), getSupplierOptions()]);
 
   return (
     <div className="grid gap-6">
