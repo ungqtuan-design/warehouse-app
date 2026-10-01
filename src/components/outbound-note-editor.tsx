@@ -87,7 +87,7 @@ export function OutboundNoteEditor({ transactionId, note, text }: {
       ) : (
         <div className="flex items-start gap-2">
           <span className="min-w-0 whitespace-pre-wrap break-words">{currentNote || "-"}</span>
-          <button type="button" disabled={pending} onClick={() => { setDraft(currentNote ?? ""); setMessage(""); setEditing(true); }} className="shrink-0 rounded px-2 py-1 text-xs font-medium text-cyan-800 hover:bg-cyan-50 disabled:opacity-70">
+          <button type="button" disabled={pending} onClick={() => { setDraft(currentNote ?? ""); setMessage(""); setEditing(true); }} className="shrink-0 rounded-lg border border-cyan-300 bg-cyan-50 px-3 py-1.5 text-sm font-semibold text-cyan-900 hover:bg-cyan-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-600 disabled:opacity-70">
             {currentNote ? text.editNote : text.addNote}
           </button>
         </div>
