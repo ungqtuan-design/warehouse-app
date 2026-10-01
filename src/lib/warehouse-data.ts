@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 export const LIST_PAGE_SIZE = 50;
+export const OUTBOUND_TRANSACTION_TYPES = [TransactionType.TRANSFER, TransactionType.CUSTOMER_OUT];
 
 type DashboardRiskLevel = "red" | "yellow" | "normal";
 
@@ -335,7 +336,7 @@ export async function getInboundProductOptions() {
 export async function getBasketRows() {
   const transactions = await prisma.inventoryTransaction.findMany({
     where: {
-      type: TransactionType.CUSTOMER_OUT,
+      type: { in: OUTBOUND_TRANSACTION_TYPES },
     },
     select: {
       id: true,
@@ -355,7 +356,7 @@ export async function getBasketRows() {
     product: transaction.product.name,
     source: transaction.sourceLocation?.name ?? "Kho Lẻ",
     quantity: transaction.quantity,
-    note: transaction.note ?? "-",
+    note: transaction.note,
     createdAt: transaction.createdAt.toLocaleString("sv-SE"),
   }));
 }

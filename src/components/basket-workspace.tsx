@@ -1,15 +1,16 @@
 "use client";
 
-import { startTransition, useActionState, useEffect, useMemo, useRef, useState } from "react";
+import { useRef, useState, useTransition } from "react";
 import { Ban } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 import { submitBasketAction } from "@/app/actions/warehouse";
 import { ActionToast, primaryActionButtonClass, secondaryActionButtonClass, type ActionNotice } from "@/components/action-feedback";
 import { useBasket } from "@/components/basket-provider";
+import { OutboundNoteEditor, type OutboundNoteText } from "@/components/outbound-note-editor";
 import { formatNumber } from "@/lib/format";
 
-type BasketWorkspaceText = {
+type BasketWorkspaceText = OutboundNoteText & {
   basket: string;
   outboundBasket: string;
   currentBasket: string;
@@ -22,7 +23,7 @@ type BasketWorkspaceText = {
   clearBasket: string;
   totalBasketItems: string;
   note: string;
-  submit: string;
+  confirmOutbound: string;
   submitting: string;
   basketSubmitSuccess: string;
   basketSubmitError: string;
@@ -39,7 +40,7 @@ type BasketHistoryRow = {
   product: string;
   source: string;
   quantity: number;
-  note: string;
+  note: string | null;
   createdAt: string;
 };
 
@@ -54,45 +55,38 @@ export function BasketWorkspace({
   const { items, totalCount, removeItem, clearBasket } = useBasket();
   const [lineNotes, setLineNotes] = useState<Record<string, string>>({});
   const [notice, setNotice] = useState<ActionNotice>(null);
-  const handledStateRef = useRef<string>("idle:");
-  const [state, formAction, pending] = useActionState(submitBasketAction, {
-    status: "idle" as const,
-    message: "",
-  });
+  const [pending, startSubmitting] = useTransition();
+  const submittingRef = useRef(false);
 
-  const serializedLines = useMemo(() => JSON.stringify(items.map((item) => ({
-    productId: item.productId,
-    quantity: item.quantity,
-    warehouse: item.warehouse,
-    note: lineNotes[item.key]?.trim() ?? "",
-  }))), [items, lineNotes]);
+  function confirmOutbound() {
+    if (submittingRef.current || pending || items.length === 0) return;
+    submittingRef.current = true;
+    const payload = new FormData();
+    payload.set("linesJson", JSON.stringify(items.map((item) => ({
+      productId: item.productId,
+      quantity: item.quantity,
+      warehouse: item.warehouse,
+      note: lineNotes[item.key]?.trim() ?? "",
+    }))));
 
-  useEffect(() => {
-    const currentStateKey = `${state.status}:${state.message}`;
-
-    if (handledStateRef.current === currentStateKey) {
-      return;
-    }
-
-    handledStateRef.current = currentStateKey;
-
-    if (state.status === "success") {
-      clearBasket();
-      setLineNotes({});
-      setNotice({ kind: "success", message: text.basketSubmitSuccess });
-      startTransition(() => {
-        router.refresh();
-      });
-      return;
-    }
-
-    if (state.status === "error") {
-      setNotice({
-        kind: "error",
-        message: state.message === "One or more basket items exceed available stock." ? text.basketStockError : text.basketSubmitError,
-      });
-    }
-  }, [clearBasket, router, state.message, state.status, text.basketStockError, text.basketSubmitError, text.basketSubmitSuccess]);
+    startSubmitting(async () => {
+      try {
+        const result = await submitBasketAction({ status: "idle", message: "" }, payload);
+        if (result.status === "success") {
+          clearBasket();
+          setLineNotes({});
+          setNotice({ kind: "success", message: text.basketSubmitSuccess });
+          router.refresh();
+        } else {
+          setNotice({ kind: "error", message: result.message === "One or more basket items exceed available stock." ? text.basketStockError : text.basketSubmitError });
+        }
+      } catch {
+        setNotice({ kind: "error", message: text.basketSubmitError });
+      } finally {
+        submittingRef.current = false;
+      }
+    });
+  }
 
   return (
     <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -111,7 +105,8 @@ export function BasketWorkspace({
           {text.basketEmpty}
         </p>
       ) : (
-        <form action={formAction} className="mt-5 grid gap-4">
+        // No submit form: Enter in a field cannot implicitly confirm an outbound.
+        <div className="mt-5 grid gap-4">
           <div className="overflow-x-auto rounded-2xl border border-slate-200">
             <table className="min-w-[920px] divide-y divide-slate-200 text-left text-sm lg:min-w-full">
               <thead className="bg-slate-50 text-slate-500">
@@ -135,6 +130,7 @@ export function BasketWorkspace({
                     <td className="px-4 py-3 text-slate-700">{formatNumber(item.quantity)}</td>
                     <td className="px-4 py-3">
                       <input
+                        aria-label={`${text.note} ${item.sku}`}
                         value={lineNotes[item.key] ?? ""}
                         onChange={(event) => setLineNotes((current) => ({
                           ...current,
@@ -155,17 +151,15 @@ export function BasketWorkspace({
             </table>
           </div>
 
-          <input type="hidden" name="linesJson" value={serializedLines} />
-
           <div className="flex flex-col gap-3 sm:flex-row">
             <button type="button" onClick={clearBasket} className={secondaryActionButtonClass}>
               {text.clearBasket}
             </button>
-            <button type="submit" disabled={pending || items.length === 0} className={primaryActionButtonClass}>
-              {pending ? text.submitting : text.submit}
+            <button type="button" onClick={confirmOutbound} disabled={pending || items.length === 0} className={primaryActionButtonClass}>
+              {pending ? text.submitting : text.confirmOutbound}
             </button>
           </div>
-        </form>
+        </div>
       )}
 
       <div className="mt-8">
@@ -198,7 +192,9 @@ export function BasketWorkspace({
                   <td className="px-4 py-3 text-slate-700">{line.product}</td>
                   <td className="px-4 py-3 text-slate-600">{line.source}</td>
                   <td className="px-4 py-3 text-slate-700">{formatNumber(line.quantity)}</td>
-                  <td className="px-4 py-3 text-slate-600">{line.note}</td>
+                  <td className="px-4 py-3 text-slate-600">
+                    <OutboundNoteEditor key={line.note} transactionId={line.id} note={line.note} text={text} />
+                  </td>
                   <td className="px-4 py-3 text-slate-600">{line.createdAt}</td>
                 </tr>
               ))}

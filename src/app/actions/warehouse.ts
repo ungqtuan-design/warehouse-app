@@ -10,6 +10,7 @@ import { requireAdmin, requireUser } from "@/lib/auth";
 import { hashPassword } from "@/lib/password";
 import { prisma } from "@/lib/prisma";
 import {
+  OUTBOUND_TRANSACTION_TYPES,
   searchProductRows,
   searchSuppliers,
   type ProductSearchParams,
@@ -76,6 +77,12 @@ const outboundLineSchema = z.object({
 const outboundBatchSchema = z.object({
   lines: z.array(outboundLineSchema).min(1),
 });
+
+const outboundNoteSchema = z.object({
+  transactionId: z.string().trim().min(1).max(191),
+  // Limit the raw payload as well as the stored note (including whitespace).
+  note: z.string().max(500).trim().transform((note) => note || null),
+}).strict();
 
 type ProductUpdateInlineState = {
   status: "idle" | "success" | "error";
@@ -626,6 +633,42 @@ export async function submitBasketAction(
     status: "success",
     message: "Basket submitted successfully.",
   };
+}
+
+export async function updateOutboundNoteAction(input: {
+  transactionId: string;
+  note: string;
+}): Promise<FormActionState & { note?: string | null }> {
+  await requireUser();
+
+  const parsed = outboundNoteSchema.safeParse(input);
+  if (!parsed.success) {
+    return { status: "error", message: "outbound-note-invalid" };
+  }
+
+  try {
+    const transaction = await prisma.inventoryTransaction.findFirst({
+      where: { id: parsed.data.transactionId, type: { in: OUTBOUND_TRANSACTION_TYPES } },
+      select: { id: true },
+    });
+    if (!transaction) {
+      return { status: "error", message: "outbound-note-unavailable" };
+    }
+
+    // Repeat the type guard in the write so a concurrent change cannot widen access.
+    const result = await prisma.inventoryTransaction.updateMany({
+      where: { id: transaction.id, type: { in: OUTBOUND_TRANSACTION_TYPES } },
+      data: { note: parsed.data.note },
+    });
+    if (result.count !== 1) {
+      return { status: "error", message: "outbound-note-unavailable" };
+    }
+  } catch {
+    return { status: "error", message: "outbound-note-failed" };
+  }
+
+  revalidatePath("/basket");
+  return { status: "success", message: "outbound-note-saved", note: parsed.data.note };
 }
 
 export async function resetUserPasswordAction(
