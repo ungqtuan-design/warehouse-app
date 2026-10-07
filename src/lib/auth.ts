@@ -27,6 +27,10 @@ function deleteSessionCookies(cookieStore: Awaited<ReturnType<typeof cookies>>) 
   }
 }
 
+export async function clearSessionCookies() {
+  deleteSessionCookies(await cookies());
+}
+
 export const getCurrentSession = cache(async () => {
   const cookieStore = await cookies();
   const token = cookieStore.get(SESSION_COOKIE_NAME)?.value ?? cookieStore.get(LEGACY_SESSION_COOKIE_NAME)?.value;

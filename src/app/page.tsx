@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 import { requireUser } from "@/lib/auth";
-import { formatNumber } from "@/lib/format";
+import { formatNumber, maskSupplierName } from "@/lib/format";
 import { uiText as text } from "@/lib/ui";
 import { getDashboardData } from "@/lib/warehouse-data";
 
@@ -104,7 +104,7 @@ export default async function Home() {
                 <tr key={row.id}>
                   <td className="px-4 py-3 font-medium text-slate-900">{row.sku}</td>
                   <td className="px-4 py-3 text-slate-900">{row.name}</td>
-                  <td className="px-4 py-3 text-slate-600">{row.supplierName}</td>
+                  <td className="px-4 py-3 text-slate-600">{maskSupplierName(row.supplierName)}</td>
                   <td className="px-4 py-3 text-slate-600">{formatNumber(row.khoTongQty)}</td>
                   <td className="px-4 py-3 text-slate-600">{formatNumber(row.khoLeQty)}</td>
                   <td className="px-4 py-3 font-semibold text-slate-950">{formatNumber(row.totalQty)}</td>

@@ -81,12 +81,17 @@ export default async function RootLayout({
                     <p className="text-sm font-medium text-slate-600">
                       {text.greeting} {user.username}
                     </p>
-                    <form action={logoutAction}>
-                      <button type="submit" className="signout-button inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white/80 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50">
-                        <LogOut className="h-4 w-4" />
-                        {text.signOut}
-                      </button>
-                    </form>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Link href="/change-password" prefetch={false} className="inline-flex items-center rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-cyan-600">
+                        {text.changePassword}
+                      </Link>
+                      <form action={logoutAction}>
+                        <button type="submit" className="signout-button inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white/80 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50">
+                          <LogOut className="h-4 w-4" />
+                          {text.signOut}
+                        </button>
+                      </form>
+                    </div>
                   </div>
                 </div>
               </div>
