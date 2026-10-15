@@ -691,3 +691,167 @@ test('actual PostgreSQL executes the parameterized classification SELECTs with V
     await db.close();
   }
 });
+
+const inventoryInstant = new Date('2026-10-14T17:15:00.000Z');
+const viInventoryHeaders = 'Thời điểm báo cáo,SKU,Sản phẩm,Kho Tổng,Kho Lẻ,Tổng số lượng,Giá vốn hiện tại,Giá trị Kho Tổng,Giá trị Kho Lẻ,Tổng giá trị';
+
+function inventoryFixture(stock = [
+  { id: 'A', sku: 'A', name: 'Sản phẩm A', costPrice: new realPrisma.Prisma.Decimal('40000'), mainQty: 100n, retailQty: 20n },
+  { id: 'B', sku: 'B', name: 'Sản phẩm B', costPrice: new realPrisma.Prisma.Decimal('0.10'), mainQty: 3n, retailQty: 0n },
+]) {
+  const calls = [];
+  const report = api({ $queryRaw: async query => {
+    calls.push(query);
+    assert.match(query.text, /FROM "InventoryBalance"/);
+    assert.doesNotMatch(query.text, /InventoryTransaction|createdAt|UPDATE|INSERT|DELETE|CREATE|ALTER|DROP/);
+    return stock;
+  } });
+  const current = report.getCurrentInventoryValuation;
+  report.getCurrentInventoryValuation = () => current(inventoryInstant);
+  return { report, calls, stock };
+}
+
+test('inventory SQL reads a consistent current snapshot: A-H cases, missing costs, inactive stock, negatives, unique SKUs and exact KPI reconciliation', async () => {
+  const { PGlite } = require('@electric-sql/pglite');
+  const db = new PGlite();
+  const calls = [];
+  try {
+    await db.exec('BEGIN READ ONLY');
+    const report = api({ $queryRaw: async query => {
+      calls.push(query);
+      assert.doesNotMatch(query.text, /InventoryTransaction|createdAt|status|UPDATE|INSERT|DELETE|CREATE|ALTER|DROP/);
+      const sql = `WITH "Product" (id, sku, name, "costPrice", status) AS (VALUES
+        ('A','A','Sản phẩm A',40000::numeric,'ACTIVE'), ('B','B','B',0.10,'ACTIVE'),
+        ('C','C','C',0,'ACTIVE'), ('D','D','D',0,'ACTIVE'), ('E','E','E',2.15,'ACTIVE'),
+        ('F','F','F',10,'ACTIVE'), ('G','G','G',0,'ACTIVE'), ('H','H','H',NULL,'ACTIVE'),
+        ('I','I','Ngưng hoạt động',5,'INACTIVE'), ('J','J','Không có tồn',0,'ACTIVE')
+      ), "Location" (id, code) AS (VALUES ('M','KHO_TONG'),('R','KHO_LE'),('X','OTHER')),
+      "InventoryBalance" ("productId", "locationId", quantity) AS (VALUES
+        ('A','M',100),('A','R',20),('B','M',3),('C','R',7),('D','M',0),('D','R',0),
+        ('E','R',8),('F','M',-2),('G','M',5),('G','R',-5),('H','R',2),('I','M',1),('A','X',999)
+      ) ${query.text}`;
+      return (await db.query(sql, query.values)).rows;
+    } });
+    const result = await report.getCurrentInventoryValuation(inventoryInstant);
+    assert.equal(calls.length, 1, 'one SQL read; no product-by-product lookups');
+    assert.deepEqual(Array.from(result.rows, row => row.sku), ['A', 'B', 'C', 'E', 'F', 'G', 'H', 'I']);
+    assert.equal(new Set(result.rows.map(row => row.id)).size, result.rows.length);
+    const a = result.rows[0];
+    assert.equal(a.mainQty, 100); assert.equal(a.retailQty, 20); assert.equal(a.totalQty, 120);
+    assert.equal(a.mainValue, '4000000.00'); assert.equal(a.retailValue, '800000.00'); assert.equal(a.totalValue, '4800000.00');
+    assert.equal(result.rows.find(row => row.id === 'B').retailQty, 0);
+    assert.equal(result.rows.find(row => row.id === 'E').mainQty, 0);
+    assert.equal(result.rows.find(row => row.id === 'F').totalQty, -2);
+    assert.equal(result.rows.find(row => row.id === 'F').totalValue, '-20.00');
+    assert.equal(result.rows.find(row => row.id === 'G').retailQty, -5, 'offsetting negative stock stays visible');
+    assert.equal(result.rows.find(row => row.id === 'G').totalQty, 0);
+    for (const id of ['C', 'H']) {
+      assert.equal(result.rows.find(row => row.id === id).costPrice, '0.00');
+      assert.equal(result.rows.find(row => row.id === id).totalValue, '0.00');
+    }
+    assert.equal(result.missingCostSkus, 2, 'nonzero total stock only; zero-stock and offset-to-zero SKUs excluded');
+    assert.equal(result.mainQty, 107); assert.equal(result.retailQty, 32); assert.equal(result.totalQty, 139);
+    assert.equal(result.mainValue, '3999985.30'); assert.equal(result.retailValue, '800017.20'); assert.equal(result.totalValue, '4800002.50');
+    for (const key of ['mainValue', 'retailValue', 'totalValue']) {
+      assert.equal(result.rows.reduce((sum, row) => sum.add(row[key]), new realPrisma.Prisma.Decimal(0)).toFixed(2), result[key]);
+    }
+    await db.exec('ROLLBACK');
+  } finally { await db.close(); }
+});
+
+test('inventory money retains cents beyond JS safe integer limits and uses changed current cost without mutating data', async () => {
+  const f = inventoryFixture([
+    { id: 'A', sku: 'A', name: 'A', costPrice: new realPrisma.Prisma.Decimal('999999999999.99'), mainQty: 2000000000n, retailQty: 0n },
+    { id: 'B', sku: 'B', name: 'B', costPrice: new realPrisma.Prisma.Decimal('0.10'), mainQty: 0n, retailQty: 3n },
+  ]);
+  const before = f.stock.map(row => ({ ...row }));
+  const result = await f.report.getCurrentInventoryValuation();
+  assert.equal(result.totalValue, '1999999999999980000000.30');
+  assert.deepEqual(f.stock, before);
+  f.stock[1].costPrice = new realPrisma.Prisma.Decimal('0.15');
+  assert.equal((await f.report.getCurrentInventoryValuation()).retailValue, '0.45');
+});
+
+test('inventory page has four KPIs, nine columns, all four tabs and no date/transaction controls even with stale dates', async () => {
+  const { report, calls } = inventoryFixture();
+  const html = await renderPage({ mode: 'inventory', from: 'bad', to: '1900-01-01', flow: 'TRANSFER' }, 'en', undefined, report);
+  assert.equal(calls.length, 1);
+  assert.equal((html.match(/<article /g) || []).length, 4);
+  assert.equal((html.match(/scope="col"/g) || []).length, 9);
+  assert.match(html, /4\.000\.000,3 ₫/); assert.match(html, /800\.000 ₫/); assert.match(html, /4\.800\.000,3 ₫/);
+  assert.match(html, /Giá trị tồn kho được tính theo số lượng tồn và giá vốn hiện tại tại thời điểm xem\./);
+  assert.match(html, /không phải tồn kho lịch sử/);
+  assert.match(html, /15\/10\/2026 00:15/); assert.match(html, /UTC\+07/);
+  assert.match(html, /aria-current="page" href="\/warehouse-accounting\?mode=inventory"/);
+  for (const label of ['Xuất kho', 'Nhập kho', 'Hàng hoàn / trả', 'Tồn kho hiện tại']) assert.ok(html.includes(label));
+  assert.match(html, /\/api\/export\/warehouse-accounting\?mode=inventory/);
+  assert.match(html, /overflow-x-auto/); assert.match(html, /min-w-\[1150px\]/);
+  assert.doesNotMatch(html, /type="date"|name="from"|name="to"|name="flow"|60 ngày|dark:/);
+  assert.match(await renderPage(dates), /\/warehouse-accounting\?mode=inventory/);
+});
+
+test('inventory missing-cost warning keeps quantities and negative balances visible', async () => {
+  const { report } = inventoryFixture([
+    { id: 'A', sku: 'A', name: 'Không có giá', costPrice: null, mainQty: 5n, retailQty: 0n },
+    { id: 'B', sku: 'B', name: 'Âm', costPrice: new realPrisma.Prisma.Decimal('0'), mainQty: 0n, retailQty: -2n },
+  ]);
+  const result = await report.getCurrentInventoryValuation();
+  assert.equal(result.missingCostSkus, 2); assert.equal(result.totalValue, '0.00');
+  const html = await renderPage({ mode: 'inventory' }, undefined, undefined, report);
+  assert.match(html, /chưa được phản ánh đầy đủ/); assert.match(html, /text-rose-700">-2</);
+});
+
+test('inventory CSV has Vietnamese BOM headers, raw exact values, snapshot filename and matches UI KPI totals', async () => {
+  const { report } = inventoryFixture();
+  const response = await exportCsv(report, { mode: 'inventory', from: 'bad', to: 'bad' });
+  assert.equal(response.headers.get('content-disposition'), 'attachment; filename="ke-toan-kho_ton-kho-hien-tai_2026-10-15.csv"');
+  const csv = await csvBody(response);
+  assert.equal(csv, viInventoryHeaders + '\n15/10/2026 00:15,A,Sản phẩm A,100,20,120,40000.00,4000000.00,800000.00,4800000.00\n15/10/2026 00:15,B,Sản phẩm B,3,0,3,0.10,0.30,0.00,0.30');
+  assert.doesNotMatch(csv, /₫|4\.000\.000/);
+  const screen = await report.getCurrentInventoryValuation();
+  for (const [index, key] of [[7, 'mainValue'], [8, 'retailValue'], [9, 'totalValue']]) {
+    const total = csv.split('\n').slice(1).reduce((sum, row) => sum.add(row.split(',')[index]), new realPrisma.Prisma.Decimal(0));
+    assert.equal(total.toFixed(2), screen[key]);
+  }
+});
+
+test('inventory CSV escapes Vietnamese names containing commas, quotes and newlines', async () => {
+  const { report, stock } = inventoryFixture();
+  stock[0].name = 'Cà phê, "Đặc biệt"\r\nHộp';
+  assert.ok((await csvBody(await exportCsv(report, { mode: 'inventory' }))).includes('"Cà phê, ""Đặc biệt""\r\nHộp"'));
+});
+
+test('empty inventory gives zero KPIs, a clear empty state and header-only CSV', async () => {
+  const { report } = inventoryFixture([]);
+  const result = await report.getCurrentInventoryValuation();
+  assert.equal(result.totalQty, 0); assert.equal(result.missingCostSkus, 0);
+  for (const key of ['mainValue', 'retailValue', 'totalValue']) assert.equal(result[key], '0.00');
+  const html = await renderPage({ mode: 'inventory' }, undefined, undefined, report);
+  assert.match(html, /Không có sản phẩm còn tồn kho hiện tại/);
+  assert.doesNotMatch(html, /chưa được phản ánh đầy đủ/);
+  assert.equal(await csvBody(await exportCsv(report, { mode: 'inventory' })), viInventoryHeaders);
+});
+
+test('inventory page and CSV authenticate before reads; ambiguous mode is rejected', async () => {
+  const { report, calls } = inventoryFixture();
+  const unauthorized = async () => { throw new Error('redirect:/login'); };
+  await assert.rejects(renderPage({ mode: 'inventory' }, undefined, unauthorized, report), /redirect:\/login/);
+  await assert.rejects(exportCsv(report, { mode: 'inventory' }, undefined, unauthorized), /redirect:\/login/);
+  assert.equal((await exportCsv(api(), 'mode=inventory&mode=outbound')).status, 400);
+  assert.equal(calls.length, 0);
+});
+
+test('inventory timestamp and filename date use Vietnam midnight independently of host timezone', () => {
+  const report = api();
+  const oldTimezone = process.env.TZ;
+  try {
+    for (const timezone of ['UTC', 'America/Los_Angeles', 'Asia/Tokyo']) {
+      process.env.TZ = timezone;
+      assert.equal(report.formatInventorySnapshotTime('2026-10-14T16:59:59Z'), '14/10/2026 23:59');
+      assert.equal(report.formatInventorySnapshotTime('2026-10-14T17:00:00Z'), '15/10/2026 00:00');
+      assert.equal(report.formatInventorySnapshotTime('2026-12-31T17:05:00Z'), '01/01/2027 00:05');
+    }
+  } finally {
+    if (oldTimezone === undefined) delete process.env.TZ; else process.env.TZ = oldTimezone;
+  }
+});

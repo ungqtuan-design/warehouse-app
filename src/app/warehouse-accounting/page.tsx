@@ -3,11 +3,86 @@ import Link from "next/link";
 import { requireUser } from "@/lib/auth";
 import { formatNumber } from "@/lib/format";
 import { uiText as text } from "@/lib/ui";
-import { formatAccountingMoney, getWarehouseAccountingReport, parseAccountingFilters, type AccountingParams } from "@/lib/warehouse-accounting";
+import { formatAccountingMoney, formatInventorySnapshotTime, getCurrentInventoryValuation, getWarehouseAccountingReport, parseAccountingFilters, type AccountingParams, type AccountingFilters } from "@/lib/warehouse-accounting";
+
+function AccountingTabs({ mode, from, to, flow, returnKind = "all" }: {
+  mode: AccountingFilters["mode"] | "inventory";
+} & Partial<Pick<AccountingFilters, "from" | "to" | "flow" | "returnKind">>) {
+  return <nav aria-label={text.warehouseAccounting} className="mt-5 flex flex-wrap gap-2">
+    {(["outbound", "inbound", "returns", "inventory"] as const).map((tab) => (
+      <Link key={tab} prefetch={false} aria-current={mode === tab ? "page" : undefined}
+        href={`/warehouse-accounting?${new URLSearchParams({ mode: tab,
+          ...(tab === "inventory" ? {} : {
+            ...(from && to ? { from, to } : {}),
+            flow: tab === "returns" ? "RETURNS" : flow === "TRANSFER" ? flow : tab === "inbound" ? "MANUFACTURER_IN" : "CUSTOMER_OUT",
+            ...(tab === "returns" ? { returnKind } : {}),
+          }) })}`}
+        className={`rounded-full px-4 py-2 text-sm font-semibold ${mode === tab ? "bg-slate-950 text-white" : "bg-slate-100 text-slate-700 hover:bg-slate-50"}`}>
+        {tab === "inventory" ? text.accountingInventory : tab === "returns" ? text.accountingReturns : tab === "outbound" ? text.accountingOutbound : text.accountingInbound}
+      </Link>
+    ))}
+  </nav>;
+}
+
+function InventoryValuationReport({ report }: { report: Awaited<ReturnType<typeof getCurrentInventoryValuation>> }) {
+  const headers = [text.sku, text.product, text.khoTong, text.khoLe, text.accountingTotalQuantity,
+    text.accountingCurrentCost, text.accountingMainValue, text.accountingRetailValue, text.accountingTotalValue];
+  return <div className="grid min-w-0 gap-6">
+    <section className="min-w-0 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
+      <h1 className="text-2xl font-semibold text-slate-950">{text.warehouseAccounting}</h1>
+      <p className="mt-2 text-sm text-slate-600">{text.accountingInventoryCostNote}</p>
+      <AccountingTabs mode="inventory" />
+      <h2 className="mt-5 text-lg font-semibold text-slate-950">{text.accountingInventory}</h2>
+      <p className="mt-2 text-sm text-slate-600">{text.accountingInventorySnapshotNote}</p>
+      <p className="mt-2 text-sm text-slate-500">{text.accountingSnapshotTime}: <time dateTime={report.snapshotAt}>{formatInventorySnapshotTime(report.snapshotAt)}</time> (UTC+07)</p>
+      {report.missingCostSkus > 0 && <p className="mt-3 rounded-xl bg-amber-50 p-3 text-sm text-amber-900">{text.accountingMissingCostNote}</p>}
+    </section>
+    <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4" aria-label={text.accountingInventory}>
+      {[
+        { label: text.accountingMainValue, value: formatAccountingMoney(report.mainValue) },
+        { label: text.accountingRetailValue, value: formatAccountingMoney(report.retailValue) },
+        { label: text.accountingInventoryValue, value: formatAccountingMoney(report.totalValue) },
+        { label: text.accountingMissingCost, value: formatNumber(report.missingCostSkus) },
+      ].map((card) => <article key={card.label} aria-label={card.label} className="min-w-0 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <h2 className="text-sm font-medium text-slate-600">{card.label}</h2>
+        <p className="mt-3 break-words text-2xl font-semibold text-slate-950">{card.value}</p>
+      </article>)}
+    </section>
+    <section className="min-w-0 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
+      <div className="mb-4 flex justify-end">
+        <a download href="/api/export/warehouse-accounting?mode=inventory" className="rounded-xl bg-slate-950 px-4 py-2 text-sm font-semibold text-white">{text.accountingExport}</a>
+      </div>
+      <div className="overflow-x-auto rounded-2xl border border-slate-200">
+        <table className="w-full min-w-[1150px] divide-y divide-slate-200 text-left text-sm">
+          <caption className="sr-only">{text.accountingInventory}</caption>
+          <thead className="bg-slate-50 text-slate-500"><tr>{headers.map((label, index) => (
+            <th key={label} scope="col" className={`px-4 py-3 font-medium ${index >= 2 ? "text-right" : ""}`}>{label}</th>
+          ))}</tr></thead>
+          <tbody className="divide-y divide-slate-200 bg-white">
+            {report.rows.length === 0 ? <tr><td colSpan={headers.length} className="px-4 py-10 text-center text-slate-500">{text.accountingInventoryEmpty}</td></tr>
+              : report.rows.map((row) => <tr key={row.id}>
+                <td className="px-4 py-3 font-medium text-slate-900">{row.sku}</td>
+                <td className="px-4 py-3 text-slate-900">{row.name}</td>
+                {[row.mainQty, row.retailQty, row.totalQty].map((quantity, index) => (
+                  <td key={index} className={`px-4 py-3 text-right tabular-nums ${quantity < 0 ? "font-semibold text-rose-700" : "text-slate-600"}`}>{formatNumber(quantity)}</td>
+                ))}
+                {[row.costPrice, row.mainValue, row.retailValue, row.totalValue].map((value, index) => (
+                  <td key={index} className={`whitespace-nowrap px-4 py-3 text-right tabular-nums ${index === 3 ? "font-semibold text-slate-950" : "text-slate-600"}`}>{formatAccountingMoney(value)}</td>
+                ))}
+              </tr>)}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>;
+}
 
 export default async function WarehouseAccountingPage({ searchParams }: { searchParams: Promise<AccountingParams> }) {
   await requireUser();
   const params = await searchParams;
+  if (params.mode === "inventory") {
+    return <InventoryValuationReport report={await getCurrentInventoryValuation()} />;
+  }
   const report = await getWarehouseAccountingReport(params);
   const defaults = parseAccountingFilters({});
   if (!defaults.ok) throw new Error("Invalid current date");
@@ -32,17 +107,7 @@ export default async function WarehouseAccountingPage({ searchParams }: { search
       <section className="min-w-0 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
         <h1 className="text-2xl font-semibold text-slate-950">{text.warehouseAccounting}</h1>
         <p className="mt-2 text-sm text-slate-600">{text.accountingCostNote}</p>
-        <nav aria-label={text.warehouseAccounting} className="mt-5 flex flex-wrap gap-2">
-          {(["outbound", "inbound", "returns"] as const).map((tab) => (
-            <Link key={tab} prefetch={false} aria-current={mode === tab ? "page" : undefined}
-              href={`/warehouse-accounting?${new URLSearchParams({ mode: tab, from, to,
-                flow: tab === "returns" ? "RETURNS" : flow === "TRANSFER" ? flow : tab === "inbound" ? "MANUFACTURER_IN" : "CUSTOMER_OUT",
-                ...(tab === "returns" ? { returnKind } : {}) })}`}
-              className={`rounded-full px-4 py-2 text-sm font-semibold ${mode === tab ? "bg-slate-950 text-white" : "bg-slate-100 text-slate-700 hover:bg-slate-50"}`}>
-              {tab === "returns" ? text.accountingReturns : tab === "outbound" ? text.accountingOutbound : text.accountingInbound}
-            </Link>
-          ))}
-        </nav>
+        <AccountingTabs mode={mode} from={from} to={to} flow={flow} returnKind={returnKind} />
         <form action="/warehouse-accounting" method="get" className="mt-5 grid min-w-0 gap-4 sm:grid-cols-2 xl:grid-cols-[2fr_1fr_1fr_auto] xl:items-end">
           <input type="hidden" name="mode" value={mode} />
           {isReturns ? <>

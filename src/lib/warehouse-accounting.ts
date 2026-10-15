@@ -181,3 +181,60 @@ export function formatAccountingMoney(value: string) {
   const decimals = fraction.replace(/0+$/, "");
   return `${sign}${BigInt(whole).toLocaleString("vi-VN")}${decimals ? `,${decimals}` : ""} ₫`;
 }
+
+type InventoryValuationStock = {
+  id: string;
+  sku: string;
+  name: string;
+  costPrice: Prisma.Decimal | null;
+  mainQty: bigint;
+  retailQty: bigint;
+};
+
+// A single statement gives both warehouses and current costs one consistent
+// snapshot. Include inactive products and offsetting negative balances as well.
+export async function getCurrentInventoryValuation(now = new Date()) {
+  const stock = await prisma.$queryRaw<InventoryValuationStock[]>(Prisma.sql`
+    SELECT p.id, p.sku, p.name, p."costPrice",
+      COALESCE(SUM(b.quantity) FILTER (WHERE l.code = 'KHO_TONG'), 0) AS "mainQty",
+      COALESCE(SUM(b.quantity) FILTER (WHERE l.code = 'KHO_LE'), 0) AS "retailQty"
+    FROM "InventoryBalance" b
+    JOIN "Product" p ON p.id = b."productId"
+    JOIN "Location" l ON l.id = b."locationId"
+    WHERE l.code IN ('KHO_TONG', 'KHO_LE')
+    GROUP BY p.id, p.sku, p.name, p."costPrice"
+    HAVING SUM(b.quantity) <> 0 OR MIN(b.quantity) < 0
+    ORDER BY p.sku ASC
+  `);
+  let mainQty = 0;
+  let retailQty = 0;
+  let mainValue = new Money(0);
+  let retailValue = new Money(0);
+  let missingCostSkus = 0;
+  const rows = stock.map((product) => {
+    const main = Number(product.mainQty);
+    const retail = Number(product.retailQty);
+    const totalQty = main + retail;
+    const cost = new Money(product.costPrice?.toString() ?? "0");
+    const mainAmount = cost.mul(main);
+    const retailAmount = cost.mul(retail);
+    mainQty += main;
+    retailQty += retail;
+    mainValue = mainValue.add(mainAmount);
+    retailValue = retailValue.add(retailAmount);
+    if (totalQty !== 0 && cost.isZero()) missingCostSkus++;
+    return { id: product.id, sku: product.sku, name: product.name,
+      mainQty: main, retailQty: retail, totalQty, costPrice: cost.toFixed(2),
+      mainValue: mainAmount.toFixed(2), retailValue: retailAmount.toFixed(2),
+      totalValue: mainAmount.add(retailAmount).toFixed(2) };
+  });
+  return { snapshotAt: now.toISOString(), snapshotDate: vietnamDateString(now), rows,
+    mainQty, retailQty, totalQty: mainQty + retailQty, missingCostSkus,
+    mainValue: mainValue.toFixed(2), retailValue: retailValue.toFixed(2),
+    totalValue: mainValue.add(retailValue).toFixed(2) };
+}
+
+export function formatInventorySnapshotTime(snapshotAt: string) {
+  const vietnam = new Date(new Date(snapshotAt).getTime() + VIETNAM_OFFSET_MS).toISOString();
+  return `${vietnam.slice(8, 10)}/${vietnam.slice(5, 7)}/${vietnam.slice(0, 4)} ${vietnam.slice(11, 16)}`;
+}

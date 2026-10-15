@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth";
 import { toCsv } from "@/lib/csv";
 import { uiText as text } from "@/lib/ui";
-import { getWarehouseAccountingReport, type AccountingParams } from "@/lib/warehouse-accounting";
+import { formatInventorySnapshotTime, getCurrentInventoryValuation, getWarehouseAccountingReport, type AccountingParams } from "@/lib/warehouse-accounting";
 
 export async function GET(request: Request) {
   await requireUser();
@@ -14,6 +14,31 @@ export async function GET(request: Request) {
     const values = searchParams.getAll(key);
     return [key, values.length === 1 ? values[0] : values];
   }));
+  if (params.mode === "inventory") {
+    const report = await getCurrentInventoryValuation();
+    const headers = [text.accountingSnapshotTime, text.sku, text.product, text.khoTong, text.khoLe,
+      text.accountingTotalQuantity, text.accountingCurrentCost, text.accountingMainValue,
+      text.accountingRetailValue, text.accountingTotalValue];
+    const rows = report.rows.map((row) => ({
+      [text.accountingSnapshotTime]: formatInventorySnapshotTime(report.snapshotAt),
+      [text.sku]: row.sku,
+      [text.product]: row.name,
+      [text.khoTong]: row.mainQty,
+      [text.khoLe]: row.retailQty,
+      [text.accountingTotalQuantity]: row.totalQty,
+      [text.accountingCurrentCost]: row.costPrice,
+      [text.accountingMainValue]: row.mainValue,
+      [text.accountingRetailValue]: row.retailValue,
+      [text.accountingTotalValue]: row.totalValue,
+    }));
+    return new NextResponse(toCsv(rows, headers), {
+      headers: {
+        "Content-Type": "text/csv; charset=utf-8",
+        "Content-Disposition": `attachment; filename="ke-toan-kho_ton-kho-hien-tai_${report.snapshotDate}.csv"`,
+        "Cache-Control": "private, no-store",
+      },
+    });
+  }
   const report = await getWarehouseAccountingReport(params);
   if (!report.ok) {
     return NextResponse.json({ error: text[report.error] }, { status: 400, headers: { "Cache-Control": "no-store" } });
