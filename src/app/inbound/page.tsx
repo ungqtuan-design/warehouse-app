@@ -1,5 +1,6 @@
 import { InboundBatchEditor } from "@/components/inbound-batch-editor";
 import { requireUser } from "@/lib/auth";
+import { LocalDateTime } from "@/components/local-date-time";
 import { formatNumber } from "@/lib/format";
 import { uiText as text } from "@/lib/ui";
 import { getInboundProductOptions, getInboundRows } from "@/lib/warehouse-data";
@@ -34,7 +35,7 @@ export default async function InboundPage() {
                 <th className="px-4 py-3 font-medium">{text.supplier}</th>
                 <th className="px-4 py-3 font-medium">{text.quantity}</th>
                 <th className="px-4 py-3 font-medium">{text.note}</th>
-                <th className="px-4 py-3 font-medium">{text.created}</th>
+                <th className="px-4 py-3 font-medium">Thời điểm nhập (giờ thiết bị)</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 bg-white">
@@ -50,7 +51,7 @@ export default async function InboundPage() {
                   <td className="px-4 py-3 text-slate-600">{line.supplier}</td>
                   <td className="px-4 py-3 text-slate-700">{formatNumber(line.quantity)}</td>
                   <td className="px-4 py-3 text-slate-600">{line.note}</td>
-                  <td className="px-4 py-3 text-slate-600">{line.createdAt}</td>
+                  <td className="px-4 py-3 text-slate-600"><LocalDateTime iso={line.createdAt} /></td>
                 </tr>
               ))}
             </tbody>

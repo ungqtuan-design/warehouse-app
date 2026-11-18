@@ -307,7 +307,7 @@ export async function getInboundRows() {
     supplier: transaction.product.supplier.name,
     quantity: transaction.quantity,
     note: transaction.note ?? "-",
-    createdAt: transaction.createdAt.toLocaleString("sv-SE"),
+    createdAt: transaction.createdAt.toISOString(),
   }));
 }
 
@@ -357,7 +357,7 @@ export async function getBasketRows() {
     source: transaction.sourceLocation?.name ?? "Kho Lẻ",
     quantity: transaction.quantity,
     note: transaction.note,
-    createdAt: transaction.createdAt.toLocaleString("sv-SE"),
+    createdAt: transaction.createdAt.toISOString(),
   }));
 }
 

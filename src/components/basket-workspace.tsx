@@ -8,6 +8,7 @@ import { submitBasketAction } from "@/app/actions/warehouse";
 import { ActionToast, primaryActionButtonClass, secondaryActionButtonClass, type ActionNotice } from "@/components/action-feedback";
 import { useBasket } from "@/components/basket-provider";
 import { OutboundNoteEditor, type OutboundNoteText } from "@/components/outbound-note-editor";
+import { LocalDateTime } from "@/components/local-date-time";
 import { formatNumber } from "@/lib/format";
 
 type BasketWorkspaceText = OutboundNoteText & {
@@ -176,7 +177,7 @@ export function BasketWorkspace({
                 <th className="px-4 py-3 font-medium">{text.source}</th>
                 <th className="px-4 py-3 font-medium">{text.quantity}</th>
                 <th className="px-4 py-3 font-medium">{text.note}</th>
-                <th className="px-4 py-3 font-medium">{text.created}</th>
+                <th className="px-4 py-3 font-medium">Thời điểm nhập (giờ thiết bị)</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 bg-white">
@@ -195,7 +196,7 @@ export function BasketWorkspace({
                   <td className="px-4 py-3 text-slate-600">
                     <OutboundNoteEditor key={line.note} transactionId={line.id} note={line.note} text={text} />
                   </td>
-                  <td className="px-4 py-3 text-slate-600">{line.createdAt}</td>
+                  <td className="px-4 py-3 text-slate-600"><LocalDateTime iso={line.createdAt} /></td>
                 </tr>
               ))}
             </tbody>

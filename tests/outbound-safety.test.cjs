@@ -182,7 +182,7 @@ test('basket note has no implicit-submit form; only final button dispatches acti
       calls++; assert.equal(JSON.parse(form.get('linesJson'))[0].quantity, 2);
       return new Promise((resolve) => { finish = resolve; });
     } },
-    '@/components/action-feedback': { ActionToast: () => null }, '@/components/outbound-note-editor': { OutboundNoteEditor: () => null },
+    '@/components/local-date-time': { LocalDateTime: () => null }, '@/components/action-feedback': { ActionToast: () => null }, '@/components/outbound-note-editor': { OutboundNoteEditor: () => null },
     '@/components/basket-provider': { useBasket: () => ({ items: [{ key: 'p', productId: 'p', sku: 'SKU', quantity: 2, warehouse: 'KHO_LE' }], totalCount: 2, clearBasket: () => clears++ }) },
     '@/lib/format': { formatNumber: String },
   });

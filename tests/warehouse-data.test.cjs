@@ -72,3 +72,18 @@ test('search aggregates only the returned page and retains pagination', async ()
   assert.equal(result.total, 60);
   assert.equal(result.rows[0].outbound7d, 0);
 });
+
+test('history sends UTC ISO instants for both inbound and outbound without changing stored times', async () => {
+  const instant = new Date('2026-11-18T09:33:40.480Z');
+  const api = load({ inventoryTransaction: { findMany: async () => [{
+    id: 'sample', quantity: 1, note: null, createdAt: instant,
+    product: { sku: 'sample', name: 'sample', supplier: { name: 'supplier' } },
+    sourceLocation: { name: 'Kho Lẻ' },
+  }] } });
+  for (const read of [api.getInboundRows, api.getBasketRows]) {
+    const [row] = await read();
+    assert.equal(row.createdAt, '2026-11-18T09:33:40.480Z');
+    assert.equal(new Date(row.createdAt).getTime(), instant.getTime());
+  }
+  assert.equal(instant.toISOString(), '2026-11-18T09:33:40.480Z');
+});
