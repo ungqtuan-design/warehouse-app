@@ -64,7 +64,8 @@ export async function GET(request: Request) {
   const valueHeaders = isNet ? [text.accountingGrossValue, text.accountingReturnValue, text.accountingNetValue]
     : isReturns ? [text.accountingReturnValue] : [text.accountingTotalValue];
   const headers = [text.accountingReportType, selectionHeader, text.accountingFrom, text.accountingTo,
-    text.sku, text.product, ...quantityHeaders, text.accountingCurrentCost, ...valueHeaders];
+    text.sku, text.product, ...quantityHeaders, text.accountingCurrentCost, ...valueHeaders,
+    text.accountingDateBasis, text.accountingUndatedCount];
   const rows = report.rows.map((row) => ({
     [text.accountingReportType]: isReturns ? text.accountingReturns : filters.mode === "outbound" ? text.accountingOutbound : text.accountingInbound,
     [selectionHeader]: selection.label,
@@ -87,6 +88,8 @@ export async function GET(request: Request) {
       [text.accountingReturnValue]: row.returnValue,
       [text.accountingNetValue]: row.netValue,
     } : isReturns ? { [text.accountingReturnValue]: row.returnValue } : { [text.accountingTotalValue]: row.value }),
+    [text.accountingDateBasis]: (isNet || filters.flow === "TRANSFER") ? text.accountingOutboundDateBasis : text.accountingEntryDateBasis,
+    [text.accountingUndatedCount]: report.undatedTransactionCount,
   }));
   const direction = isReturns ? "hoan-tra" : isNet ? "xuat-rong" : filters.mode === "outbound" ? "xuat" : "nhap";
   const fileName = `ke-toan-kho_${direction}_${selection.slug}_${filters.from}_${filters.to}.csv`;

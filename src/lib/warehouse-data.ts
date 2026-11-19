@@ -343,6 +343,7 @@ export async function getBasketRows() {
       quantity: true,
       note: true,
       createdAt: true,
+      outboundDate: true,
       product: { select: { sku: true, name: true } },
       sourceLocation: { select: { name: true } },
     },
@@ -357,6 +358,7 @@ export async function getBasketRows() {
     source: transaction.sourceLocation?.name ?? "Kho Lẻ",
     quantity: transaction.quantity,
     note: transaction.note,
+    outboundDate: transaction.outboundDate?.toISOString().slice(0, 10) ?? null,
     createdAt: transaction.createdAt.toISOString(),
   }));
 }
@@ -396,6 +398,7 @@ export async function getOrderExportRows() {
   const transactions = await prisma.inventoryTransaction.findMany({
     select: {
       createdAt: true,
+      outboundDate: true,
       type: true,
       quantity: true,
       referenceNo: true,
@@ -409,6 +412,7 @@ export async function getOrderExportRows() {
 
   return transactions.map((transaction) => ({
     created_at: transaction.createdAt.toISOString(),
+    outbound_date: transaction.outboundDate?.toISOString().slice(0, 10) ?? "",
     type: transaction.type,
     sku: transaction.product.sku,
     product_name: transaction.product.name,

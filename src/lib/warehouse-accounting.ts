@@ -113,18 +113,30 @@ export async function getWarehouseAccountingReport(params: AccountingParams, now
   const { filters } = parsed;
   const isNet = filters.flow === "CUSTOMER_OUT";
   const isReturns = filters.flow === "RETURNS";
-  const [grouped, inbound] = await Promise.all([
+  const outboundFlow = filters.flow === "TRANSFER" || isNet;
+  const routeWhere: Prisma.InventoryTransactionWhereInput = isNet
+    ? { sourceLocation: { code: "KHO_LE" }, destinationLocationId: null }
+    : { sourceLocation: { code: "KHO_TONG" }, destinationLocation: { code: "KHO_LE" } };
+  const [grouped, inbound, undatedTransactionCount] = await Promise.all([
     filters.flow === "TRANSFER" || isNet ? prisma.inventoryTransaction.groupBy({
       by: ["productId"],
       where: {
         type: isNet ? "CUSTOMER_OUT" : "TRANSFER",
-        createdAt: { gte: filters.start, lt: filters.endExclusive },
-        ...(isNet ? { sourceLocation: { code: "KHO_LE" }, destinationLocationId: null }
-          : { sourceLocation: { code: "KHO_TONG" }, destinationLocation: { code: "KHO_LE" } }),
+        OR: [
+          { outboundDate: { gte: new Date(`${filters.from}T00:00:00.000Z`), lte: new Date(`${filters.to}T00:00:00.000Z`) } },
+          // Legacy dates are not inferred/backfilled. Keep the old figures visible,
+          // explicitly provisional, using the previous Vietnam entry-day boundaries.
+          { outboundDate: null, createdAt: { gte: filters.start, lt: filters.endExclusive } },
+        ],
+        ...routeWhere,
       },
       _sum: { quantity: true },
     }) : [],
     filters.flow === "TRANSFER" ? [] : getClassifiedInbound(filters),
+    // Whole-flow count also warns when an older business day has no matching entry.
+    outboundFlow ? prisma.inventoryTransaction.count({
+      where: { type: isNet ? "CUSTOMER_OUT" : "TRANSFER", outboundDate: null, ...routeWhere },
+    }) : 0,
   ]);
   const quantities = new Map(filters.flow === "MANUFACTURER_IN"
     ? inbound.map((row) => [row.productId, Number(row.quantity)])
@@ -168,7 +180,7 @@ export async function getWarehouseAccountingReport(params: AccountingParams, now
       grossQuantity, hoanQuantity, traQuantity, returnQuantity, netQuantity,
       grossValue: grossValue.toFixed(2), returnValue: returnValue.toFixed(2), netValue: netValue.toFixed(2) };
   });
-  return { ok: true as const, filters, rows, totalQuantity, totalValue: totalValue.toFixed(2),
+  return { ok: true as const, filters, rows, undatedTransactionCount, totalQuantity, totalValue: totalValue.toFixed(2),
     totalGrossQuantity, totalReturnQuantity, totalNetQuantity: totalGrossQuantity - totalReturnQuantity,
     totalGrossValue: totalGrossValue.toFixed(2), totalReturnValue: totalReturnValue.toFixed(2),
     totalNetValue: totalGrossValue.sub(totalReturnValue).toFixed(2) };

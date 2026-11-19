@@ -10,6 +10,7 @@ import { useBasket } from "@/components/basket-provider";
 import { OutboundNoteEditor, type OutboundNoteText } from "@/components/outbound-note-editor";
 import { LocalDateTime } from "@/components/local-date-time";
 import { formatNumber } from "@/lib/format";
+import { formatOutboundDate, parseOutboundDate } from "@/lib/outbound-date";
 
 type BasketWorkspaceText = OutboundNoteText & {
   basket: string;
@@ -43,26 +44,35 @@ type BasketHistoryRow = {
   quantity: number;
   note: string | null;
   createdAt: string;
+  outboundDate: string | null;
 };
 
 export function BasketWorkspace({
   text,
   historyRows,
+  today,
 }: {
   text: BasketWorkspaceText;
   historyRows: BasketHistoryRow[];
+  today: string;
 }) {
   const router = useRouter();
   const { items, totalCount, removeItem, clearBasket } = useBasket();
   const [lineNotes, setLineNotes] = useState<Record<string, string>>({});
   const [notice, setNotice] = useState<ActionNotice>(null);
+  const [outboundDate, setOutboundDate] = useState(today);
   const [pending, startSubmitting] = useTransition();
   const submittingRef = useRef(false);
 
   function confirmOutbound() {
     if (submittingRef.current || pending || items.length === 0) return;
+    if (!parseOutboundDate(outboundDate, new Date(`${today}T12:00:00+07:00`))) {
+      setNotice({ kind: "error", message: "Chọn ngày xuất thực tế hợp lệ, không sau hôm nay (giờ Việt Nam)." });
+      return;
+    }
     submittingRef.current = true;
     const payload = new FormData();
+    payload.set("outboundDate", outboundDate);
     payload.set("linesJson", JSON.stringify(items.map((item) => ({
       productId: item.productId,
       quantity: item.quantity,
@@ -76,10 +86,11 @@ export function BasketWorkspace({
         if (result.status === "success") {
           clearBasket();
           setLineNotes({});
-          setNotice({ kind: "success", message: text.basketSubmitSuccess });
+          setOutboundDate(today);
+          setNotice({ kind: "success", message: `${text.basketSubmitSuccess} Ngày xuất thực tế: ${formatOutboundDate(outboundDate)}.` });
           router.refresh();
         } else {
-          setNotice({ kind: "error", message: result.message === "One or more basket items exceed available stock." ? text.basketStockError : text.basketSubmitError });
+          setNotice({ kind: "error", message: result.message === "outbound-date-invalid" ? "Chọn ngày xuất thực tế hợp lệ, không sau hôm nay (giờ Việt Nam)." : result.message === "One or more basket items exceed available stock." ? text.basketStockError : text.basketSubmitError });
         }
       } catch {
         setNotice({ kind: "error", message: text.basketSubmitError });
@@ -99,6 +110,18 @@ export function BasketWorkspace({
         <div className="rounded-2xl bg-cyan-50 px-4 py-3 text-sm font-semibold text-cyan-900">
           {text.totalBasketItems}: {formatNumber(totalCount)}
         </div>
+      </div>
+
+      <div className="mt-5 rounded-xl border border-cyan-200 bg-cyan-50 p-4">
+        <label htmlFor="outbound-date" className="block text-sm font-semibold text-slate-900">Ngày xuất thực tế</label>
+        <input id="outbound-date" name="outboundDate" type="date" required max={today}
+          value={outboundDate} onChange={(event) => setOutboundDate(event.target.value)} disabled={pending}
+          aria-describedby="outbound-date-help"
+          className="mt-2 block rounded-xl border border-slate-300 bg-white px-3 py-2 text-slate-900 [color-scheme:light]" />
+        <p id="outbound-date-help" className="mt-2 text-sm text-slate-700">
+          Chọn ngày hàng thực tế rời kho. Nhập bù nhiều ngày: mỗi ngày một lượt xuất riêng.
+          COGS tính theo ngày đã chọn; thời điểm nhập hệ thống vẫn được lưu.
+        </p>
       </div>
 
       {items.length === 0 ? (
@@ -156,7 +179,7 @@ export function BasketWorkspace({
             <button type="button" onClick={clearBasket} className={secondaryActionButtonClass}>
               {text.clearBasket}
             </button>
-            <button type="button" onClick={confirmOutbound} disabled={pending || items.length === 0} className={primaryActionButtonClass}>
+            <button type="button" onClick={confirmOutbound} disabled={pending || items.length === 0 || !outboundDate} className={primaryActionButtonClass}>
               {pending ? text.submitting : text.confirmOutbound}
             </button>
           </div>
@@ -177,13 +200,14 @@ export function BasketWorkspace({
                 <th className="px-4 py-3 font-medium">{text.source}</th>
                 <th className="px-4 py-3 font-medium">{text.quantity}</th>
                 <th className="px-4 py-3 font-medium">{text.note}</th>
+                <th className="px-4 py-3 font-medium">Ngày xuất thực tế</th>
                 <th className="px-4 py-3 font-medium">Thời điểm nhập (giờ thiết bị)</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 bg-white">
               {historyRows.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-10 text-center text-sm text-slate-500">
+                  <td colSpan={7} className="px-4 py-10 text-center text-sm text-slate-500">
                     {text.noBasketRows}
                   </td>
                 </tr>
@@ -196,6 +220,7 @@ export function BasketWorkspace({
                   <td className="px-4 py-3 text-slate-600">
                     <OutboundNoteEditor key={line.note} transactionId={line.id} note={line.note} text={text} />
                   </td>
+                  <td className="px-4 py-3 text-slate-600">{formatOutboundDate(line.outboundDate)}</td>
                   <td className="px-4 py-3 text-slate-600"><LocalDateTime iso={line.createdAt} /></td>
                 </tr>
               ))}

@@ -136,6 +136,10 @@ export default async function WarehouseAccountingPage({ searchParams }: { search
           <button type="submit" className="rounded-xl bg-slate-950 px-4 py-2 text-sm font-semibold text-white">{text.accountingApply}</button>
         </form>
         <p id="accounting-date-hint" className="mt-3 text-sm text-slate-500">{text.accountingDateHint}</p>
+        {(isNet || flow === "TRANSFER") && <p className="mt-3 text-sm text-slate-600">{text.accountingOutboundDateNote}</p>}
+        {report.ok && report.undatedTransactionCount > 0 && <p role="alert" className="mt-3 rounded-xl bg-amber-50 p-3 text-sm text-amber-900">
+          Có {formatNumber(report.undatedTransactionCount)} {text.accountingUndatedWarning}
+        </p>}
         {isNet && <p className="mt-3 text-sm text-slate-600">{text.accountingNetNote}</p>}
         {(isNet || isReturns) && <p className="mt-2 text-sm text-slate-500">{text.accountingPeriodNote}</p>}
         {flow === "MANUFACTURER_IN" && <p className="mt-3 text-sm text-slate-500">{text.accountingSupplierNote}</p>}

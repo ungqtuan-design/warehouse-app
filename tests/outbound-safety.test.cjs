@@ -5,6 +5,7 @@ const vm = require('node:vm');
 const ts = require('typescript');
 const React = require('react');
 const realPrisma = require('@prisma/client');
+const dateModule = load('src/lib/outbound-date.ts', {});
 
 function load(file, dependencies) {
   const code = ts.transpileModule(fs.readFileSync(file, 'utf8'), { compilerOptions: {
@@ -57,7 +58,7 @@ function fixture() {
   const action = load('src/app/actions/warehouse.ts', {
     '@prisma/client': realPrisma, 'zod': require('zod'), 'next/cache': { revalidatePath: (path) => invalidated.push(path) },
     '@/lib/auth': { requireUser: async () => { if (!authenticated) throw new Error('login-required'); return { id: 'staff', role: 'OPERATION' }; }, requireAdmin: () => { throw new Error('must not require admin'); } },
-    '@/lib/password': {}, '@/lib/prisma': { prisma }, '@/lib/warehouse-data': data,
+    '@/lib/outbound-date': dateModule, '@/lib/password': {}, '@/lib/prisma': { prisma }, '@/lib/warehouse-data': data,
   });
   return { action, rows, balances, writes, invalidated, data, prisma,
     setAuthenticated: (value) => { authenticated = value; }, setBeforeWrite: (fn) => { beforeWrite = fn; } };
@@ -147,6 +148,7 @@ test('history includes precisely the same outbound types and preserves null vers
 test('explicit outbound action still creates correct TRANSFER and CUSTOMER_OUT quantities and balances', async () => {
   const f = fixture();
   const payload = new FormData();
+  payload.set('outboundDate', '2026-01-01');
   payload.set('linesJson', JSON.stringify([
     { productId: 'product', warehouse: 'KHO_TONG', quantity: 4, note: 'chuyển' },
     { productId: 'product', warehouse: 'KHO_LE', quantity: 2, note: 'bán' },
@@ -184,10 +186,10 @@ test('basket note has no implicit-submit form; only final button dispatches acti
     } },
     '@/components/local-date-time': { LocalDateTime: () => null }, '@/components/action-feedback': { ActionToast: () => null }, '@/components/outbound-note-editor': { OutboundNoteEditor: () => null },
     '@/components/basket-provider': { useBasket: () => ({ items: [{ key: 'p', productId: 'p', sku: 'SKU', quantity: 2, warehouse: 'KHO_LE' }], totalCount: 2, clearBasket: () => clears++ }) },
-    '@/lib/format': { formatNumber: String },
+    '@/lib/outbound-date': dateModule, '@/lib/format': { formatNumber: String },
   });
-  const tree = BasketWorkspace({ text, historyRows: [] });
-  const inputs = nodes(tree, (n) => n.type === 'input');
+  const tree = BasketWorkspace({ text, historyRows: [], today: '2026-01-02' });
+  const inputs = nodes(tree, (n) => n.type === 'input' && n.props.type !== 'date');
   assert.equal(inputs.length, 1);
   assert.equal(inputs[0].inForm, false, 'Enter in note cannot cause native implicit submit');
   assert.equal(inputs[0].node.props.onKeyDown, undefined);

@@ -113,6 +113,7 @@ model InventoryTransaction {
   destinationLocationId String?
   createdById           String?
   createdAt             DateTime        @default(now())
+  outboundDate          DateTime?       @db.Date
   product               Product         @relation(fields: [productId], references: [id])
   sourceLocation        Location?       @relation("SourceLocation", fields: [sourceLocationId], references: [id])
   destinationLocation   Location?       @relation("DestinationLocation", fields: [destinationLocationId], references: [id])
@@ -120,6 +121,7 @@ model InventoryTransaction {
 
   @@index([productId, createdAt])
   @@index([type, createdAt])
+  @@index([type, outboundDate])
 }
 
 model InventoryBalance {

@@ -8,6 +8,7 @@ import { z } from "zod";
 import type { FormActionState } from "@/lib/action-state";
 import { requireAdmin, requireUser } from "@/lib/auth";
 import { hashPassword } from "@/lib/password";
+import { parseOutboundDate } from "@/lib/outbound-date";
 import { prisma } from "@/lib/prisma";
 import {
   OUTBOUND_TRANSACTION_TYPES,
@@ -502,6 +503,11 @@ export async function submitBasketAction(
     };
   }
 
+  // Missing/duplicate dates (including an old open tab) must not silently become today.
+  const outboundDate = formData.getAll("outboundDate").length === 1
+    ? parseOutboundDate(formData.get("outboundDate")) : null;
+  if (!outboundDate) return { status: "error", message: "outbound-date-invalid" };
+
   let parsed: z.infer<typeof outboundBatchSchema>;
 
   try {
@@ -579,6 +585,7 @@ export async function submitBasketAction(
         await tx.inventoryTransaction.create({
           data: {
             type: line.warehouse === LocationCode.KHO_TONG ? "TRANSFER" : "CUSTOMER_OUT",
+            outboundDate,
             productId: line.productId,
             quantity: line.quantity,
             note: toOptionalValue(line.note),
@@ -625,6 +632,7 @@ export async function submitBasketAction(
   }
 
   revalidatePath("/basket");
+  revalidatePath("/warehouse-accounting");
   revalidatePath("/inventory");
   revalidatePath("/products");
   revalidatePath("/");

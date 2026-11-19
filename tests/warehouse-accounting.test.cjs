@@ -21,6 +21,7 @@ function load(file, dependencies) {
 }
 
 function api(prisma = {}) {
+  prisma = { ...prisma, inventoryTransaction: { count: async () => 0, ...prisma.inventoryTransaction } };
   return load('src/lib/warehouse-accounting.ts', { '@prisma/client': realPrisma, '@/lib/prisma': { prisma } });
 }
 const dates = { from: '2026-09-01', to: '2026-09-29' };
@@ -53,8 +54,8 @@ test('September 2026 Vietnam boundaries are exact UTC instants in the Prisma fil
   assert.equal(result.ok, true);
   assert.equal(result.filters.start.toISOString(), '2026-08-31T17:00:00.000Z');
   assert.equal(result.filters.endExclusive.toISOString(), '2026-09-30T17:00:00.000Z');
-  assert.equal(calls[0].where.createdAt.gte.toISOString(), '2026-08-31T17:00:00.000Z');
-  assert.equal(calls[0].where.createdAt.lt.toISOString(), '2026-09-30T17:00:00.000Z');
+  assert.equal(calls[0].where.OR[1].createdAt.gte.toISOString(), '2026-08-31T17:00:00.000Z');
+  assert.equal(calls[0].where.OR[1].createdAt.lt.toISOString(), '2026-09-30T17:00:00.000Z');
 });
 
 for (const [instant, included] of [
@@ -158,14 +159,14 @@ function fixture() {
       assert.equal(JSON.stringify(args.by), '["productId"]');
       assert.equal(JSON.stringify(args._sum), '{"quantity":true}');
       const where = args.where;
-      assert.ok(where.createdAt.gte instanceof Date);
-      assert.ok(where.createdAt.lt instanceof Date);
-      assert.equal(where.createdAt.lte, undefined);
+      assert.ok(where.OR[1].createdAt.gte instanceof Date);
+      assert.ok(where.OR[1].createdAt.lt instanceof Date);
+      assert.equal(where.OR[1].createdAt.lte, undefined);
       const grouped = new Map();
       // Test double for Postgres: only aggregates cross this boundary.
       for (const [productId, type, quantity, source, destination, created] of transactions) {
         const time = new Date(created);
-        if (type !== where.type || time < where.createdAt.gte || time >= where.createdAt.lt) continue;
+        if (type !== where.type || time < where.OR[1].createdAt.gte || time >= where.OR[1].createdAt.lt) continue;
         if (where.sourceLocation && source !== where.sourceLocation.code) continue;
         if (where.destinationLocation && destination !== where.destinationLocation.code) continue;
         if (where.sourceLocationId === null && source !== null) continue;
@@ -319,9 +320,11 @@ async function csvBody(response) {
   return bytes.subarray(3).toString('utf8');
 }
 
-const viCsvHeaders = 'Loại báo cáo,Luồng,Từ ngày,Đến ngày,SKU,Sản phẩm,Số lượng,Giá vốn hiện tại,Tổng giá trị';
-const viNetHeaders = 'Loại báo cáo,Luồng,Từ ngày,Đến ngày,SKU,Sản phẩm,Số lượng xuất,Số lượng hoàn/trả,Số lượng xuất ròng,Giá vốn hiện tại,Giá trị xuất,Giá trị hoàn/trả,Giá trị ròng';
-const viReturnHeaders = 'Loại báo cáo,Loại hoàn/trả,Từ ngày,Đến ngày,SKU,Sản phẩm,Số lượng hoàn,Số lượng trả,Tổng hoàn/trả,Giá vốn hiện tại,Giá trị hoàn/trả';
+const viCsvHeaders = 'Loại báo cáo,Luồng,Từ ngày,Đến ngày,SKU,Sản phẩm,Số lượng,Giá vốn hiện tại,Tổng giá trị,Cơ sở ngày,Số dòng chưa xác nhận ngày trong toàn bộ lịch sử';
+const viNetHeaders = 'Loại báo cáo,Luồng,Từ ngày,Đến ngày,SKU,Sản phẩm,Số lượng xuất,Số lượng hoàn/trả,Số lượng xuất ròng,Giá vốn hiện tại,Giá trị xuất,Giá trị hoàn/trả,Giá trị ròng,Cơ sở ngày,Số dòng chưa xác nhận ngày trong toàn bộ lịch sử';
+const viReturnHeaders = 'Loại báo cáo,Loại hoàn/trả,Từ ngày,Đến ngày,SKU,Sản phẩm,Số lượng hoàn,Số lượng trả,Tổng hoàn/trả,Giá vốn hiện tại,Giá trị hoàn/trả,Cơ sở ngày,Số dòng chưa xác nhận ngày trong toàn bộ lịch sử';
+const outboundDateMeta = ',Ngày xuất thực tế; dòng cũ theo ngày nhập (giờ Việt Nam),0';
+const entryDateMeta = ',Ngày nhập hệ thống (giờ Việt Nam),0';
 const selections = [
   { mode: 'outbound', flow: 'CUSTOMER_OUT', type: 'Xuất kho', label: 'Kho Lẻ → Khách hàng',
     data: 'SKU001,Product A,15,0,15,40000.00,600000.00,0.00,600000.00', file: 'xuat-rong_kho-le-khach' },
@@ -343,9 +346,9 @@ for (const selection of selections) {
       `attachment; filename="ke-toan-kho_${selection.file}_2026-09-01_2026-09-29.csv"`);
     const csv = await csvBody(response);
     const isNet = selection.flow === 'CUSTOMER_OUT';
-    assert.equal(csv, `${isNet ? viNetHeaders : viCsvHeaders}\n${selection.type},${selection.label},2026-09-01,2026-09-29,${selection.data}`);
+    assert.equal(csv, `${isNet ? viNetHeaders : viCsvHeaders}\n${selection.type},${selection.label},2026-09-01,2026-09-29,${selection.data}${selection.flow === "MANUFACTURER_IN" ? entryDateMeta : outboundDateMeta}`);
     assert.equal(calls.length + sqlCalls.length, isNet ? 2 : 1, 'only necessary DB aggregates, no transaction detail fetch');
-    const boundaries = calls.length ? [calls[0].where.createdAt.gte, calls[0].where.createdAt.lt]
+    const boundaries = calls.length ? [calls[0].where.OR[1].createdAt.gte, calls[0].where.OR[1].createdAt.lt]
       : sqlCalls[0].values.filter((value) => value instanceof Date);
     assert.equal(boundaries[0].toISOString(), '2026-08-31T17:00:00.000Z');
     assert.equal(boundaries[1].toISOString(), '2026-09-29T17:00:00.000Z');
@@ -371,7 +374,7 @@ test('CSV uses the current product cost, preserves exact decimal cents and Vietn
   products[0].name = 'Cà phê, "Đặc biệt"\r\nHộp giấy\rGói lẻ';
   products[0].costPrice = new realPrisma.Prisma.Decimal('1544.01');
   const csv = await csvBody(await exportCsv(report));
-  assert.equal(csv, `${viNetHeaders}\nXuất kho,Kho Lẻ → Khách hàng,2026-09-01,2026-09-29,SKU001,"Cà phê, ""Đặc biệt""\r\nHộp giấy\rGói lẻ",15,0,15,1544.01,23160.15,0.00,23160.15`);
+  assert.equal(csv, `${viNetHeaders}\nXuất kho,Kho Lẻ → Khách hàng,2026-09-01,2026-09-29,SKU001,"Cà phê, ""Đặc biệt""\r\nHộp giấy\rGói lẻ",15,0,15,1544.01,23160.15,0.00,23160.15${outboundDateMeta}`);
   assert.doesNotMatch(csv, /₫/);
 });
 
@@ -379,7 +382,7 @@ test('CSV always uses Vietnamese despite legacy preferences; empty reports retai
   const { report } = fixture();
   for (const language of [undefined, 'vi', 'en', 'EN', 'English', 'unsupported-language']) {
     const csv = await csvBody(await exportCsv(report, dates, language));
-    assert.equal(csv, viNetHeaders + '\nXuất kho,Kho Lẻ → Khách hàng,2026-09-01,2026-09-29,SKU001,Product A,15,0,15,40000.00,600000.00,0.00,600000.00');
+    assert.equal(csv, viNetHeaders + '\nXuất kho,Kho Lẻ → Khách hàng,2026-09-01,2026-09-29,SKU001,Product A,15,0,15,40000.00,600000.00,0.00,600000.00' + outboundDateMeta);
   }
   const emptyReport = api({ inventoryTransaction: { groupBy: async () => [] }, $queryRaw: async () => [] });
   assert.equal(await csvBody(await exportCsv(emptyReport)), viNetHeaders);
@@ -391,8 +394,8 @@ test('CSV accepts exactly 60 inclusive days and rejects invalid or duplicate fil
   const { report, calls } = fixture();
   await csvBody(await exportCsv(report, { from: '2026-01-01', to: '2026-03-01' }));
   assert.equal(calls.length, 1);
-  assert.equal(calls[0].where.createdAt.gte.toISOString(), '2025-12-31T17:00:00.000Z');
-  assert.equal(calls[0].where.createdAt.lt.toISOString(), '2026-03-01T17:00:00.000Z');
+  assert.equal(calls[0].where.OR[1].createdAt.gte.toISOString(), '2025-12-31T17:00:00.000Z');
+  assert.equal(calls[0].where.OR[1].createdAt.lt.toISOString(), '2026-03-01T17:00:00.000Z');
   const invalidReport = api(); // No DB methods available: any query fails this test.
   const { uiText: text } = loadUi('vi');
   for (const [params, error] of [
@@ -485,7 +488,7 @@ test('net outbound reconciles 100 gross - 15 returns = 85 with exact current-cos
   assert.equal(sqlCalls.length, 1);
   const sqlDates = sqlCalls[0].values.filter((value) => value instanceof Date);
   assert.deepEqual(sqlDates.map((value) => value.toISOString()),
-    [calls[0].where.createdAt.gte.toISOString(), calls[0].where.createdAt.lt.toISOString()]);
+    [calls[0].where.OR[1].createdAt.gte.toISOString(), calls[0].where.OR[1].createdAt.lt.toISOString()]);
   assert.equal(JSON.stringify({ products, transactions }), before);
   products[0].costPrice = new realPrisma.Prisma.Decimal('1544.01');
   const updated = await report.getWarehouseAccountingReport(dates);
@@ -529,7 +532,7 @@ test('note normalization is exact; supplier inbound excludes returns and adjustm
   assert.equal(supplier.totalValue, '280000.00');
   assert.equal(sqlCalls.length, 2);
   const supplierCsv = await csvBody(await exportCsv(report, { ...dates, mode: 'inbound' }));
-  assert.equal(supplierCsv, `${viCsvHeaders}\nNhập kho,NCC → Kho Tổng,2026-09-01,2026-09-29,SKU001,Product A,7,40000.00,280000.00`);
+  assert.equal(supplierCsv, `${viCsvHeaders}\nNhập kho,NCC → Kho Tổng,2026-09-01,2026-09-29,SKU001,Product A,7,40000.00,280000.00${entryDateMeta}`);
 });
 
 test('supplier report excludes products having only returns/adjustments; wrong location and transaction type never count as returns', async () => {
@@ -556,7 +559,7 @@ test('supplier report excludes products having only returns/adjustments; wrong l
 test('net CSV column totals reconcile with the three UI KPIs and show the accounting formula', async () => {
   const { report } = netFixture();
   const csv = await csvBody(await exportCsv(report));
-  assert.equal(csv, `${viNetHeaders}\nXuất kho,Kho Lẻ → Khách hàng,2026-09-01,2026-09-29,SKU001,Product A,100,15,85,40000.00,4000000.00,600000.00,3400000.00`);
+  assert.equal(csv, `${viNetHeaders}\nXuất kho,Kho Lẻ → Khách hàng,2026-09-01,2026-09-29,SKU001,Product A,100,15,85,40000.00,4000000.00,600000.00,3400000.00${outboundDateMeta}`);
   for (const language of [undefined, 'vi', 'en', 'EN', 'English', 'unsupported-language']) {
     const html = await renderPage(dates, language, undefined, report);
     const { uiText: text } = loadUi(language);
@@ -592,7 +595,7 @@ for (const [kind, label, hoan, tra, value, slug] of [
     const response = await exportCsv(report, params);
     assert.equal(response.headers.get('content-disposition'),
       `attachment; filename="ke-toan-kho_hoan-tra_${slug}_2026-09-01_2026-09-29.csv"`);
-    assert.equal(await csvBody(response), `${viReturnHeaders}\nHàng hoàn / trả,${label},2026-09-01,2026-09-29,SKU001,Product A,${hoan},${tra},${hoan + tra},40000.00,${value}`);
+    assert.equal(await csvBody(response), `${viReturnHeaders}\nHàng hoàn / trả,${label},2026-09-01,2026-09-29,SKU001,Product A,${hoan},${tra},${hoan + tra},40000.00,${value}${entryDateMeta}`);
     for (const language of [undefined, 'vi', 'en', 'EN', 'English', 'unsupported-language']) {
       const html = await renderPage(params, language, undefined, report);
       assert.equal((html.match(/scope="col"/g) || []).length, 7);
